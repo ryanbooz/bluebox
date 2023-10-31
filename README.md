@@ -13,6 +13,20 @@ A future version of the database backup will be smaller once I have decent instr
 
 https://bit.ly/bluebox_v0-1
 
+## Requirements
+This database requires the PostGIS extension to be available. The easiest way to do that is to use a [Docker image from the PostGIS project](https://registry.hub.docker.com/r/postgis/postgis/), or an image that includes it.
+
+Although this database was created from PostgreSQL 16, it should be compatible with PostgreSQL 12+.
+
+## Project Goals
+Why create another version of Pagila or another sample PostgreSQL database at all? There are so many different datasets available across the web, right?
+
+Yes, there are. But most of the available datasets, as interesting as many of them are, contain static data. It is difficult to recreate in a meaningful way or add new, additional data as time marches on.
+
+Therefore, I liked the concept of Pagila. The data model is simple enough to utilize common and advanced features of PostgreSQL. It was also relatively easy to have a first go at creating new, ongoing data with some variability, with the option of enhancing the stored procedures and functions that create it.
+
+Ultimately, if I use this database as part of a course or conference opportunity, it's simple enough for others to use and understand... I think. 
+
 ### Goal 1: Utilize real movie data
 I appreciate the fun nature of the fake movie titles, but it makes it more difficult to demonstrate information about common, often popular, movies. To this end, I settled on using [The Movie Database (TMDB)](https://www.themoviedb.org/), an open-source, community contributed database of movie and TV show information.
 

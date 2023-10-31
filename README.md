@@ -6,6 +6,13 @@ Although this database is far from complete, I had a few goals when modifying Pa
 
 The name **Bluebox** is a play on the US DVD vending machine company called Redbox<sup>TM</sup>, but blue for our favorite PostgreSQL elephant, Sloink.
 
+## Download
+The initial database has nearly two years of rental and payment data. This makes the backup just over 100MB and larger than I can upload to Github. Therefore, I am currently hosting the dump file in OneDrive and sharing it publicaly.
+
+A future version of the database backup will be smaller once I have decent instructions for creating more data using the included functions.
+
+https://bit.ly/bluebox_v0-1
+
 ### Goal 1: Utilize real movie data
 I appreciate the fun nature of the fake movie titles, but it makes it more difficult to demonstrate information about common, often popular, movies. To this end, I settled on using [The Movie Database (TMDB)](https://www.themoviedb.org/), an open-source, community contributed database of movie and TV show information.
 
@@ -48,4 +55,5 @@ There is a lot to do for this database to become more feature complete. I consid
 - move application tables into a new, non-`public` schema
 - remove the `staff` requirement
 - possibly rename some tables
- - `person` (this is what TMDB calls actors/crew)
+  - `person` (this is what TMDB calls actors/crew)
+- add partitioning back to the `payment` table and possibly `rentals` as well

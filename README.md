@@ -7,11 +7,9 @@ Although this database is far from complete, I had a few goals when modifying Pa
 The name **Bluebox** is a play on the US DVD vending machine company called Redbox<sup>TM</sup>, but blue for our favorite PostgreSQL elephant, Sloink.
 
 ## Download
-The initial database has nearly two years of rental and payment data. This makes the backup just over 100MB and larger than I can upload to Github. Therefore, I am currently hosting the dump file in OneDrive and sharing it publicaly.
+A dump file is provided in the repo. For now, it will be "versioned" in the name, mostly for me to keep track of where I am.
 
-A future version of the database backup will be smaller once I have decent instructions for creating more data using the included functions.
-
-https://bit.ly/bluebox_v0-1
+It is currently 77MB in size. I will continue to figure out how to make it smaller without users having to recreate all of the data through other scripts. As the data creation functions improve, I will likely provide a dump without rental data to limit the size, giving instructions on how to create as much data as you would like.
 
 ## Requirements
 This database requires the PostGIS extension to be available. The easiest way to do that is to use a [Docker image from the PostGIS project](https://registry.hub.docker.com/r/postgis/postgis/), or an image that includes it.

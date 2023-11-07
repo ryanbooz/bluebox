@@ -1,5 +1,5 @@
 ## Requirements
-Using the **bluebox** database dump file currently requires PostgreSQL 16 with PostGIS installed and available. Many hosted solutions from AWS, Azure, or GCP (to name a few), should offer a database ready to use with these requirements.
+Using the **bluebox** database dump file currently requires PostgreSQL 12+ with PostGIS installed and available. Many hosted solutions from AWS, Azure, or GCP (to name a few), should offer a database ready to use with these requirements.
 
 The easiest way to do this locally is to use the official PostGIS Docker image.
 

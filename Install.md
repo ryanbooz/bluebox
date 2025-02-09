@@ -14,7 +14,7 @@ docker run -d --name bluebox -p 5432:5432 -e POSTGRES_PASSWORD=password postgis/
 Alternatively, you can use the **bluebox** Docker image which includes a few other extensions and `pg_stat_statements` ready to go.
 
 ```bash
-docker run -d --name bluebox -p 5432:5432 -e POSTGRES_PASSWORD=password ryanbooz/bluebox
+docker run -d --name bluebox -p 5432:5432 -e POSTGRES_PASSWORD=password ryanbooz/bluebox-postgres
 ```
 
 ## Restoring the database dump file
@@ -26,7 +26,7 @@ Once you have a running container, you can use `psql` or your IDE of choice to c
 
 Next, use `pg_restore` to restore the dump file into the newly created database.
 
-`pg_restore -h localhost -U postgres -d bluebox bluebox_v0.2.dump`
+`pg_restore -h localhost -U postgres -d bluebox bluebox_v0.3.dump`
 
 Finally, update the statistics in the database, which are not carried over in a dump.
 

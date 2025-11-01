@@ -18,25 +18,28 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: bluebox; Type: SCHEMA; Schema: -; Owner: postgres
+-- Name: bluebox; Type: SCHEMA; Schema: -; Owner: -
 --
 
 CREATE SCHEMA bluebox;
 
 
-ALTER SCHEMA bluebox OWNER TO postgres;
+--
+-- Name: staging; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA staging;
+
 
 --
--- Name: topology; Type: SCHEMA; Schema: -; Owner: postgres
+-- Name: topology; Type: SCHEMA; Schema: -; Owner: -
 --
 
 CREATE SCHEMA topology;
 
 
-ALTER SCHEMA topology OWNER TO postgres;
-
 --
--- Name: SCHEMA topology; Type: COMMENT; Schema: -; Owner: postgres
+-- Name: SCHEMA topology; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON SCHEMA topology IS 'PostGIS Topology schema';
@@ -50,7 +53,7 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION pg_stat_statements; Type: COMMENT; Schema: -; Owner: 
+-- Name: EXTENSION pg_stat_statements; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON EXTENSION pg_stat_statements IS 'track planning and execution statistics of all SQL statements executed';
@@ -64,7 +67,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: 
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
@@ -78,14 +81,14 @@ CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION postgis; Type: COMMENT; Schema: -; Owner: 
+-- Name: EXTENSION postgis; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON EXTENSION postgis IS 'PostGIS geometry and geography spatial types and functions';
 
 
 --
--- Name: mpaa_rating; Type: TYPE; Schema: public; Owner: postgres
+-- Name: mpaa_rating; Type: TYPE; Schema: public; Owner: -
 --
 
 CREATE TYPE public.mpaa_rating AS ENUM (
@@ -98,20 +101,16 @@ CREATE TYPE public.mpaa_rating AS ENUM (
 );
 
 
-ALTER TYPE public.mpaa_rating OWNER TO postgres;
-
 --
--- Name: year; Type: DOMAIN; Schema: public; Owner: postgres
+-- Name: year; Type: DOMAIN; Schema: public; Owner: -
 --
 
 CREATE DOMAIN public.year AS integer
 	CONSTRAINT year_check CHECK (((VALUE >= 1901) AND (VALUE <= 2155)));
 
 
-ALTER DOMAIN public.year OWNER TO postgres;
-
 --
--- Name: add_new_inventory(); Type: PROCEDURE; Schema: bluebox; Owner: postgres
+-- Name: add_new_inventory(); Type: PROCEDURE; Schema: bluebox; Owner: -
 --
 
 CREATE PROCEDURE bluebox.add_new_inventory()
@@ -134,12 +133,12 @@ BEGIN
 		
 		WITH inventory_tmp (film_id, popularity, total_i, release_date) AS (
 			SELECT f.film_id, f.popularity, CASE
-				WHEN f.popularity <= 20 THEN ARRAY[0,2]
-				WHEN f.popularity BETWEEN 20 AND 35 THEN ARRAY[0,2]
-				WHEN f.popularity BETWEEN 35 AND 75 THEN ARRAY[1,3]
-				WHEN f.popularity BETWEEN 75 AND 100 THEN ARRAY[2,6]
-				WHEN f.popularity BETWEEN 100 AND 500 THEN ARRAY[3,6]
-				WHEN f.popularity >500 THEN ARRAY[6,10]
+				WHEN f.popularity <= 20 THEN ARRAY[0,3]
+				WHEN f.popularity BETWEEN 20 AND 35 THEN ARRAY[0,5]
+				WHEN f.popularity BETWEEN 35 AND 75 THEN ARRAY[2,6]
+				WHEN f.popularity BETWEEN 75 AND 100 THEN ARRAY[5,8]
+				WHEN f.popularity BETWEEN 100 AND 500 THEN ARRAY[8,12]
+				WHEN f.popularity >500 THEN ARRAY[12,20]
 				END,
 				release_date
 			FROM bluebox.film f
@@ -154,7 +153,7 @@ BEGIN
 					array_agg(greatest(val-1,0))
 				WHEN release_date BETWEEN now()-'4 years'::INTERVAL AND now()-'3 year'::INTERVAL THEN
 					array_agg(greatest(val-2,0))
-				WHEN release_date < now()-'3 years'::INTERVAL THEN
+				WHEN release_date < now()-'4 years'::INTERVAL THEN
 					array_agg(greatest(val-3,0))
 			END AS total_i
 			FROM inventory_tmp it, unnest(it.total_i) AS val
@@ -172,10 +171,8 @@ END;
 $$;
 
 
-ALTER PROCEDURE bluebox.add_new_inventory() OWNER TO postgres;
-
 --
--- Name: complete_recent_rentals(interval, integer); Type: PROCEDURE; Schema: bluebox; Owner: postgres
+-- Name: complete_recent_rentals(interval, integer); Type: PROCEDURE; Schema: bluebox; Owner: -
 --
 
 CREATE PROCEDURE bluebox.complete_recent_rentals(IN min_rental_interval interval DEFAULT '24:00:00'::interval, IN max_store_dist integer DEFAULT 25000)
@@ -256,10 +253,8 @@ CREATE PROCEDURE bluebox.complete_recent_rentals(IN min_rental_interval interval
 $_$;
 
 
-ALTER PROCEDURE bluebox.complete_recent_rentals(IN min_rental_interval interval, IN max_store_dist integer) OWNER TO postgres;
-
 --
--- Name: generate_individual_rental(integer); Type: PROCEDURE; Schema: bluebox; Owner: postgres
+-- Name: generate_individual_rental(integer); Type: PROCEDURE; Schema: bluebox; Owner: -
 --
 
 CREATE PROCEDURE bluebox.generate_individual_rental(IN max_store_dist integer DEFAULT 25000)
@@ -316,10 +311,8 @@ CREATE PROCEDURE bluebox.generate_individual_rental(IN max_store_dist integer DE
 $$;
 
 
-ALTER PROCEDURE bluebox.generate_individual_rental(IN max_store_dist integer) OWNER TO postgres;
-
 --
--- Name: generate_new_rentals(interval, real, real, integer); Type: PROCEDURE; Schema: bluebox; Owner: postgres
+-- Name: generate_new_rentals(interval, real, real, integer); Type: PROCEDURE; Schema: bluebox; Owner: -
 --
 
 CREATE PROCEDURE bluebox.generate_new_rentals(IN rental_interval interval DEFAULT '00:05:00'::interval, IN cust_percent real DEFAULT 0.025, IN holiday_multiplier real DEFAULT 2.5, IN max_store_dist integer DEFAULT 25000)
@@ -429,10 +422,8 @@ CREATE PROCEDURE bluebox.generate_new_rentals(IN rental_interval interval DEFAUL
 $_$;
 
 
-ALTER PROCEDURE bluebox.generate_new_rentals(IN rental_interval interval, IN cust_percent real, IN holiday_multiplier real, IN max_store_dist integer) OWNER TO postgres;
-
 --
--- Name: generate_rental_history(timestamp with time zone, timestamp with time zone, numeric, numeric, double precision, integer, boolean); Type: PROCEDURE; Schema: bluebox; Owner: postgres
+-- Name: generate_rental_history(timestamp with time zone, timestamp with time zone, numeric, numeric, double precision, integer, boolean); Type: PROCEDURE; Schema: bluebox; Owner: -
 --
 
 CREATE PROCEDURE bluebox.generate_rental_history(IN data_start timestamp with time zone, IN data_end timestamp with time zone, IN min_cust_pct numeric DEFAULT 0.8, IN max_cust_pct numeric DEFAULT 2.5, IN holiday_multiplier double precision DEFAULT 2.5, IN store_distance integer DEFAULT 25000, IN print_debug boolean DEFAULT false)
@@ -552,10 +543,8 @@ CREATE PROCEDURE bluebox.generate_rental_history(IN data_start timestamp with ti
 $$;
 
 
-ALTER PROCEDURE bluebox.generate_rental_history(IN data_start timestamp with time zone, IN data_end timestamp with time zone, IN min_cust_pct numeric, IN max_cust_pct numeric, IN holiday_multiplier double precision, IN store_distance integer, IN print_debug boolean) OWNER TO postgres;
-
 --
--- Name: insert_payments(date); Type: PROCEDURE; Schema: bluebox; Owner: postgres
+-- Name: insert_payments(date); Type: PROCEDURE; Schema: bluebox; Owner: -
 --
 
 CREATE PROCEDURE bluebox.insert_payments(IN rd date)
@@ -582,10 +571,8 @@ CREATE PROCEDURE bluebox.insert_payments(IN rd date)
 $$;
 
 
-ALTER PROCEDURE bluebox.insert_payments(IN rd date) OWNER TO postgres;
-
 --
--- Name: insert_single_payment(integer); Type: PROCEDURE; Schema: bluebox; Owner: postgres
+-- Name: insert_single_payment(integer); Type: PROCEDURE; Schema: bluebox; Owner: -
 --
 
 CREATE PROCEDURE bluebox.insert_single_payment(IN rid integer)
@@ -610,10 +597,8 @@ CREATE PROCEDURE bluebox.insert_single_payment(IN rid integer)
 $$;
 
 
-ALTER PROCEDURE bluebox.insert_single_payment(IN rid integer) OWNER TO postgres;
-
 --
--- Name: move_cast_and_crew(); Type: PROCEDURE; Schema: bluebox; Owner: postgres
+-- Name: move_cast_and_crew(); Type: PROCEDURE; Schema: bluebox; Owner: -
 --
 
 CREATE PROCEDURE bluebox.move_cast_and_crew()
@@ -631,14 +616,14 @@ BEGIN
 	DELETE FROM staging.film_crew WHERE film_id IN (
 	SELECT DISTINCT(fc.film_id) FROM
 		staging.film_crew fc
-		LEFT JOIN public.film f USING (film_id)
+		LEFT JOIN bluebox.film f USING (film_id)
 		WHERE f.film_id IS NULL 
 	);
 	
 	DELETE FROM staging.film_cast WHERE film_id IN (
 	SELECT DISTINCT(fc.film_id) FROM
 		staging.film_cast fc
-		LEFT JOIN public.film f USING (film_id)
+		LEFT JOIN bluebox.film f USING (film_id)
 		WHERE f.film_id IS NULL 
 	);
 	
@@ -660,10 +645,8 @@ END;
 $$;
 
 
-ALTER PROCEDURE bluebox.move_cast_and_crew() OWNER TO postgres;
-
 --
--- Name: update_movie_rating(); Type: PROCEDURE; Schema: bluebox; Owner: postgres
+-- Name: update_movie_rating(); Type: PROCEDURE; Schema: bluebox; Owner: -
 --
 
 CREATE PROCEDURE bluebox.update_movie_rating()
@@ -683,10 +666,8 @@ END;
 $$;
 
 
-ALTER PROCEDURE bluebox.update_movie_rating() OWNER TO postgres;
-
 --
--- Name: _group_concat(text, text); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: _group_concat(text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public._group_concat(text, text) RETURNS text
@@ -700,10 +681,8 @@ END
 $_$;
 
 
-ALTER FUNCTION public._group_concat(text, text) OWNER TO postgres;
-
 --
--- Name: film_in_stock(integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: film_in_stock(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.film_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
@@ -717,10 +696,8 @@ CREATE FUNCTION public.film_in_stock(p_film_id integer, p_store_id integer, OUT 
 $_$;
 
 
-ALTER FUNCTION public.film_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) OWNER TO postgres;
-
 --
--- Name: film_not_in_stock(integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: film_not_in_stock(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.film_not_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
@@ -734,10 +711,8 @@ CREATE FUNCTION public.film_not_in_stock(p_film_id integer, p_store_id integer, 
 $_$;
 
 
-ALTER FUNCTION public.film_not_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) OWNER TO postgres;
-
 --
--- Name: get_customer_balance(integer, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_customer_balance(integer, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.get_customer_balance(p_customer_id integer, p_effective_date timestamp with time zone) RETURNS numeric
@@ -779,10 +754,8 @@ END
 $$;
 
 
-ALTER FUNCTION public.get_customer_balance(p_customer_id integer, p_effective_date timestamp with time zone) OWNER TO postgres;
-
 --
--- Name: get_inventory(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_inventory(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.get_inventory() RETURNS TABLE(film_id bigint, popularity real, total_i integer[], x numeric)
@@ -821,10 +794,8 @@ SELECT ai.film_id, ai.popularity, ai.total_i, x.i FROM adjusted_inventory ai, ra
 END; $$;
 
 
-ALTER FUNCTION public.get_inventory() OWNER TO postgres;
-
 --
--- Name: inventory_held_by_customer(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: inventory_held_by_customer(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.inventory_held_by_customer(p_inventory_id integer) RETURNS integer
@@ -843,10 +814,8 @@ BEGIN
 END $$;
 
 
-ALTER FUNCTION public.inventory_held_by_customer(p_inventory_id integer) OWNER TO postgres;
-
 --
--- Name: inventory_in_stock(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: inventory_in_stock(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.inventory_in_stock(p_inventory_id integer) RETURNS boolean
@@ -880,10 +849,8 @@ BEGIN
 END $$;
 
 
-ALTER FUNCTION public.inventory_in_stock(p_inventory_id integer) OWNER TO postgres;
-
 --
--- Name: last_day(timestamp with time zone); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: last_day(timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.last_day(timestamp with time zone) RETURNS date
@@ -898,10 +865,8 @@ CREATE FUNCTION public.last_day(timestamp with time zone) RETURNS date
 $_$;
 
 
-ALTER FUNCTION public.last_day(timestamp with time zone) OWNER TO postgres;
-
 --
--- Name: last_updated(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: last_updated(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.last_updated() RETURNS trigger
@@ -913,10 +878,8 @@ BEGIN
 END $$;
 
 
-ALTER FUNCTION public.last_updated() OWNER TO postgres;
-
 --
--- Name: random_between(numeric, numeric, integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: random_between(numeric, numeric, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.random_between(min_val numeric, max_val numeric, round_to integer DEFAULT 0) RETURNS numeric
@@ -934,10 +897,73 @@ END
 $$;
 
 
-ALTER FUNCTION public.random_between(min_val numeric, max_val numeric, round_to integer) OWNER TO postgres;
+--
+-- Name: transform_credits(); Type: PROCEDURE; Schema: staging; Owner: -
+--
+
+CREATE PROCEDURE staging.transform_credits()
+    LANGUAGE plpgsql
+    AS $$	
+ BEGIN 
+	WITH cast_temp AS (
+		SELECT film_id, (x->>'id')::bigint id, 1 credit_type, (x->>'gender')::int gender, 
+			x->>'character' "character", NULL department, NULL job 
+		FROM staging.film_credits, jsonb_array_elements("cast") x
+	)
+	INSERT INTO staging.film_cast
+	SELECT film_id, id, "character" FROM cast_temp
+	ON CONFLICT ON CONSTRAINT film_cast_pk DO NOTHING;
+	
+	WITH crew_temp AS ( 
+		SELECT film_id, (x->>'id')::bigint id, 2 credit_type, (x->>'gender')::int gender,
+			NULL "character", x->>'department' department, x->>'job' job
+		FROM staging.film_credits, jsonb_array_elements("crew") x
+	)
+	INSERT INTO staging.film_crew
+	SELECT film_id, id, department, job FROM crew_temp
+	ON CONFLICT ON CONSTRAINT film_crew_pk DO NOTHING; 
+	
+	END;
+$$;
+
 
 --
--- Name: group_concat(text); Type: AGGREGATE; Schema: public; Owner: postgres
+-- Name: transform_film_details(); Type: PROCEDURE; Schema: staging; Owner: -
+--
+
+CREATE PROCEDURE staging.transform_film_details()
+    LANGUAGE plpgsql
+    AS $$	
+ BEGIN 
+
+	-- Every so often, after processing films, it didn't have
+	-- all of the info necessary to move forward
+	DELETE FROM staging.FILM_DETAIL FD 
+	USING staging.film_detail fd2
+	LEFT JOIN bluebox.film f USING (film_id)
+	WHERE fd.film_id = fd2.film_id AND f.film_id IS NULL;
+
+	WITH production_companies AS (
+		SELECT DISTINCT film_id, (x->>'id')::int id, x->>'name' "name" FROM staging.film_detail, jsonb_array_elements(production_companies) x
+		WHERE processed IS FALSE 
+			--AND film_id NOT IN (SELECT DISTINCT film_id FROM film)
+			AND film_id NOT IN (SELECT DISTINCT film_id FROM film_production_company)
+	),
+	save_production_company AS (
+		INSERT INTO bluebox.production_company
+		SELECT DISTINCT id, "name" FROM production_companies
+		ON CONFLICT (production_company_id) DO NOTHING
+	)
+	INSERT INTO bluebox.film_production_company
+	SELECT DISTINCT film_id, id FROM production_companies
+	ON CONFLICT ON CONSTRAINT film_production_company_pk DO NOTHING;
+	
+	END;
+$$;
+
+
+--
+-- Name: group_concat(text); Type: AGGREGATE; Schema: public; Owner: -
 --
 
 CREATE AGGREGATE public.group_concat(text) (
@@ -946,14 +972,12 @@ CREATE AGGREGATE public.group_concat(text) (
 );
 
 
-ALTER AGGREGATE public.group_concat(text) OWNER TO postgres;
-
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: customer; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: customer; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.customer (
@@ -970,10 +994,8 @@ CREATE TABLE bluebox.customer (
 );
 
 
-ALTER TABLE bluebox.customer OWNER TO postgres;
-
 --
--- Name: film; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: film; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.film (
@@ -994,10 +1016,8 @@ CREATE TABLE bluebox.film (
 );
 
 
-ALTER TABLE bluebox.film OWNER TO postgres;
-
 --
--- Name: film_cast; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: film_cast; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.film_cast (
@@ -1007,10 +1027,8 @@ CREATE TABLE bluebox.film_cast (
 );
 
 
-ALTER TABLE bluebox.film_cast OWNER TO postgres;
-
 --
--- Name: film_crew; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: film_crew; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.film_crew (
@@ -1021,10 +1039,8 @@ CREATE TABLE bluebox.film_crew (
 );
 
 
-ALTER TABLE bluebox.film_crew OWNER TO postgres;
-
 --
--- Name: film_genre; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: film_genre; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.film_genre (
@@ -1033,10 +1049,8 @@ CREATE TABLE bluebox.film_genre (
 );
 
 
-ALTER TABLE bluebox.film_genre OWNER TO postgres;
-
 --
--- Name: film_production_company; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: film_production_company; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.film_production_company (
@@ -1045,10 +1059,8 @@ CREATE TABLE bluebox.film_production_company (
 );
 
 
-ALTER TABLE bluebox.film_production_company OWNER TO postgres;
-
 --
--- Name: genre_genre_id_seq; Type: SEQUENCE; Schema: bluebox; Owner: postgres
+-- Name: genre_genre_id_seq; Type: SEQUENCE; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE bluebox.film_genre ALTER COLUMN genre_id ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -1062,7 +1074,7 @@ ALTER TABLE bluebox.film_genre ALTER COLUMN genre_id ADD GENERATED BY DEFAULT AS
 
 
 --
--- Name: holiday; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: holiday; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.holiday (
@@ -1073,10 +1085,8 @@ CREATE TABLE bluebox.holiday (
 );
 
 
-ALTER TABLE bluebox.holiday OWNER TO postgres;
-
 --
--- Name: inventory_inventory_id_seq; Type: SEQUENCE; Schema: bluebox; Owner: postgres
+-- Name: inventory_inventory_id_seq; Type: SEQUENCE; Schema: bluebox; Owner: -
 --
 
 CREATE SEQUENCE bluebox.inventory_inventory_id_seq
@@ -1087,10 +1097,8 @@ CREATE SEQUENCE bluebox.inventory_inventory_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE bluebox.inventory_inventory_id_seq OWNER TO postgres;
-
 --
--- Name: inventory; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: inventory; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.inventory (
@@ -1102,10 +1110,8 @@ CREATE TABLE bluebox.inventory (
 WITH (autovacuum_vacuum_scale_factor='.60', autovacuum_vacuum_threshold='100', autovacuum_analyze_scale_factor='.80');
 
 
-ALTER TABLE bluebox.inventory OWNER TO postgres;
-
 --
--- Name: language_language_id_seq; Type: SEQUENCE; Schema: bluebox; Owner: postgres
+-- Name: language_language_id_seq; Type: SEQUENCE; Schema: bluebox; Owner: -
 --
 
 CREATE SEQUENCE bluebox.language_language_id_seq
@@ -1116,10 +1122,8 @@ CREATE SEQUENCE bluebox.language_language_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE bluebox.language_language_id_seq OWNER TO postgres;
-
 --
--- Name: language; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: language; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.language (
@@ -1129,10 +1133,8 @@ CREATE TABLE bluebox.language (
 );
 
 
-ALTER TABLE bluebox.language OWNER TO postgres;
-
 --
--- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: bluebox; Owner: postgres
+-- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: bluebox; Owner: -
 --
 
 CREATE SEQUENCE bluebox.payment_payment_id_seq
@@ -1143,10 +1145,8 @@ CREATE SEQUENCE bluebox.payment_payment_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE bluebox.payment_payment_id_seq OWNER TO postgres;
-
 --
--- Name: payment; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: payment; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.payment (
@@ -1158,10 +1158,8 @@ CREATE TABLE bluebox.payment (
 );
 
 
-ALTER TABLE bluebox.payment OWNER TO postgres;
-
 --
--- Name: person; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: person; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.person (
@@ -1178,10 +1176,8 @@ CREATE TABLE bluebox.person (
 );
 
 
-ALTER TABLE bluebox.person OWNER TO postgres;
-
 --
--- Name: person_person_id_seq; Type: SEQUENCE; Schema: bluebox; Owner: postgres
+-- Name: person_person_id_seq; Type: SEQUENCE; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE bluebox.person ALTER COLUMN person_id ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -1195,7 +1191,7 @@ ALTER TABLE bluebox.person ALTER COLUMN person_id ADD GENERATED BY DEFAULT AS ID
 
 
 --
--- Name: production_company; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: production_company; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.production_company (
@@ -1204,10 +1200,8 @@ CREATE TABLE bluebox.production_company (
 );
 
 
-ALTER TABLE bluebox.production_company OWNER TO postgres;
-
 --
--- Name: release_type; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: release_type; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.release_type (
@@ -1216,10 +1210,8 @@ CREATE TABLE bluebox.release_type (
 );
 
 
-ALTER TABLE bluebox.release_type OWNER TO postgres;
-
 --
--- Name: rental; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: rental; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.rental (
@@ -1233,10 +1225,8 @@ CREATE TABLE bluebox.rental (
 WITH (autovacuum_vacuum_scale_factor='.60', autovacuum_vacuum_threshold='100', autovacuum_analyze_scale_factor='.80');
 
 
-ALTER TABLE bluebox.rental OWNER TO postgres;
-
 --
--- Name: rental_rental_id_seq1; Type: SEQUENCE; Schema: bluebox; Owner: postgres
+-- Name: rental_rental_id_seq1; Type: SEQUENCE; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE bluebox.rental ALTER COLUMN rental_id ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -1250,7 +1240,7 @@ ALTER TABLE bluebox.rental ALTER COLUMN rental_id ADD GENERATED BY DEFAULT AS ID
 
 
 --
--- Name: staff_staff_id_seq; Type: SEQUENCE; Schema: bluebox; Owner: postgres
+-- Name: staff_staff_id_seq; Type: SEQUENCE; Schema: bluebox; Owner: -
 --
 
 CREATE SEQUENCE bluebox.staff_staff_id_seq
@@ -1261,10 +1251,8 @@ CREATE SEQUENCE bluebox.staff_staff_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE bluebox.staff_staff_id_seq OWNER TO postgres;
-
 --
--- Name: staff; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: staff; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.staff (
@@ -1282,10 +1270,8 @@ CREATE TABLE bluebox.staff (
 );
 
 
-ALTER TABLE bluebox.staff OWNER TO postgres;
-
 --
--- Name: store; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: store; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.store (
@@ -1298,10 +1284,8 @@ CREATE TABLE bluebox.store (
 );
 
 
-ALTER TABLE bluebox.store OWNER TO postgres;
-
 --
--- Name: zip_code_info; Type: TABLE; Schema: bluebox; Owner: postgres
+-- Name: zip_code_info; Type: TABLE; Schema: bluebox; Owner: -
 --
 
 CREATE TABLE bluebox.zip_code_info (
@@ -1327,10 +1311,81 @@ CREATE TABLE bluebox.zip_code_info (
 );
 
 
-ALTER TABLE bluebox.zip_code_info OWNER TO postgres;
+--
+-- Name: film_cast; Type: TABLE; Schema: staging; Owner: -
+--
+
+CREATE TABLE staging.film_cast (
+    film_id bigint NOT NULL,
+    person_id bigint NOT NULL,
+    film_character text NOT NULL
+);
+
 
 --
--- Name: customer customer_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: film_credits; Type: TABLE; Schema: staging; Owner: -
+--
+
+CREATE TABLE staging.film_credits (
+    film_id bigint NOT NULL,
+    "cast" jsonb,
+    crew jsonb,
+    id integer NOT NULL
+);
+
+
+--
+-- Name: film_credits_id_seq; Type: SEQUENCE; Schema: staging; Owner: -
+--
+
+ALTER TABLE staging.film_credits ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME staging.film_credits_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: film_crew; Type: TABLE; Schema: staging; Owner: -
+--
+
+CREATE TABLE staging.film_crew (
+    film_id bigint NOT NULL,
+    person_id bigint NOT NULL,
+    department text,
+    job text
+);
+
+
+--
+-- Name: film_detail; Type: TABLE; Schema: staging; Owner: -
+--
+
+CREATE TABLE staging.film_detail (
+    film_id bigint,
+    budget bigint,
+    revenue bigint,
+    runtime integer,
+    production_companies jsonb,
+    processed boolean DEFAULT false
+);
+
+
+--
+-- Name: release_date; Type: TABLE; Schema: staging; Owner: -
+--
+
+CREATE TABLE staging.release_date (
+    film_id bigint,
+    releases jsonb
+);
+
+
+--
+-- Name: customer customer_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.customer
@@ -1338,7 +1393,7 @@ ALTER TABLE ONLY bluebox.customer
 
 
 --
--- Name: film_cast film_cast_pk; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: film_cast film_cast_pk; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.film_cast
@@ -1346,7 +1401,7 @@ ALTER TABLE ONLY bluebox.film_cast
 
 
 --
--- Name: film_crew film_crew_pk; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: film_crew film_crew_pk; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.film_crew
@@ -1354,7 +1409,7 @@ ALTER TABLE ONLY bluebox.film_crew
 
 
 --
--- Name: film film_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: film film_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.film
@@ -1362,7 +1417,7 @@ ALTER TABLE ONLY bluebox.film
 
 
 --
--- Name: film_production_company film_production_company_pk; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: film_production_company film_production_company_pk; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.film_production_company
@@ -1370,7 +1425,7 @@ ALTER TABLE ONLY bluebox.film_production_company
 
 
 --
--- Name: film_genre genre_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: film_genre genre_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.film_genre
@@ -1378,7 +1433,7 @@ ALTER TABLE ONLY bluebox.film_genre
 
 
 --
--- Name: inventory inventory_pk; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: inventory inventory_pk; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.inventory
@@ -1386,7 +1441,7 @@ ALTER TABLE ONLY bluebox.inventory
 
 
 --
--- Name: payment payment_bak_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: payment payment_bak_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.payment
@@ -1394,7 +1449,7 @@ ALTER TABLE ONLY bluebox.payment
 
 
 --
--- Name: person person_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: person person_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.person
@@ -1402,7 +1457,7 @@ ALTER TABLE ONLY bluebox.person
 
 
 --
--- Name: production_company production_company_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: production_company production_company_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.production_company
@@ -1410,7 +1465,7 @@ ALTER TABLE ONLY bluebox.production_company
 
 
 --
--- Name: release_type release_type_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: release_type release_type_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.release_type
@@ -1418,7 +1473,7 @@ ALTER TABLE ONLY bluebox.release_type
 
 
 --
--- Name: rental rental_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: rental rental_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.rental
@@ -1426,7 +1481,7 @@ ALTER TABLE ONLY bluebox.rental
 
 
 --
--- Name: store store_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: store store_pkey; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.store
@@ -1434,7 +1489,7 @@ ALTER TABLE ONLY bluebox.store
 
 
 --
--- Name: zip_code_info zip_code_info_pk; Type: CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: zip_code_info zip_code_info_pk; Type: CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.zip_code_info
@@ -1442,105 +1497,129 @@ ALTER TABLE ONLY bluebox.zip_code_info
 
 
 --
--- Name: film_film_genre_ids_idx; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: film_cast film_cast_pk; Type: CONSTRAINT; Schema: staging; Owner: -
+--
+
+ALTER TABLE ONLY staging.film_cast
+    ADD CONSTRAINT film_cast_pk PRIMARY KEY (film_id, person_id);
+
+
+--
+-- Name: film_credits film_credits_pkey; Type: CONSTRAINT; Schema: staging; Owner: -
+--
+
+ALTER TABLE ONLY staging.film_credits
+    ADD CONSTRAINT film_credits_pkey PRIMARY KEY (film_id);
+
+
+--
+-- Name: film_crew film_crew_pk; Type: CONSTRAINT; Schema: staging; Owner: -
+--
+
+ALTER TABLE ONLY staging.film_crew
+    ADD CONSTRAINT film_crew_pk PRIMARY KEY (film_id, person_id);
+
+
+--
+-- Name: film_film_genre_ids_idx; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX film_film_genre_ids_idx ON bluebox.film USING gin (genre_ids);
 
 
 --
--- Name: film_fulltext_idx; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: film_fulltext_idx; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX film_fulltext_idx ON bluebox.film USING gin (fulltext);
 
 
 --
--- Name: film_person_id_film_id_idx; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: film_person_id_film_id_idx; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX film_person_id_film_id_idx ON bluebox.film_cast USING btree (person_id, film_id);
 
 
 --
--- Name: idx_rental_rental_date_brin; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: idx_rental_rental_date_brin; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX idx_rental_rental_date_brin ON bluebox.rental USING brin (lower(rental_period));
 
 
 --
--- Name: idx_title_trgm; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: idx_title_trgm; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX idx_title_trgm ON bluebox.film USING gin (title public.gin_trgm_ops);
 
 
 --
--- Name: inventory_film_id_idx; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: inventory_film_id_idx; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX inventory_film_id_idx ON bluebox.inventory USING btree (film_id);
 
 
 --
--- Name: inventory_store_id_idx; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: inventory_store_id_idx; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX inventory_store_id_idx ON bluebox.inventory USING btree (store_id);
 
 
 --
--- Name: payment_rental_id_amount_idx; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: payment_rental_id_amount_idx; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX payment_rental_id_amount_idx ON bluebox.payment USING btree (rental_id) INCLUDE (amount);
 
 
 --
--- Name: rental_customer_id_idx; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: rental_customer_id_idx; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX rental_customer_id_idx ON bluebox.rental USING btree (customer_id);
 
 
 --
--- Name: rental_inventory_id_idx; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: rental_inventory_id_idx; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX rental_inventory_id_idx ON bluebox.rental USING btree (inventory_id);
 
 
 --
--- Name: rental_rental_period_idx; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: rental_rental_period_idx; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX rental_rental_period_idx ON bluebox.rental USING gist (rental_period);
 
 
 --
--- Name: rental_rental_period_upper_null; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: rental_rental_period_upper_null; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX rental_rental_period_upper_null ON bluebox.rental USING btree (upper(rental_period)) WHERE (upper(rental_period) IS NULL);
 
 
 --
--- Name: rental_store_id_idx; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: rental_store_id_idx; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX rental_store_id_idx ON bluebox.rental USING btree (store_id);
 
 
 --
--- Name: us_postal_code_geog_gix; Type: INDEX; Schema: bluebox; Owner: postgres
+-- Name: us_postal_code_geog_gix; Type: INDEX; Schema: bluebox; Owner: -
 --
 
 CREATE INDEX us_postal_code_geog_gix ON bluebox.zip_code_info USING gist (geog);
 
 
 --
--- Name: customer customer_store_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: customer customer_store_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.customer
@@ -1548,7 +1627,7 @@ ALTER TABLE ONLY bluebox.customer
 
 
 --
--- Name: customer customer_zip_code_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: customer customer_zip_code_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.customer
@@ -1556,7 +1635,7 @@ ALTER TABLE ONLY bluebox.customer
 
 
 --
--- Name: film_cast film_cast_film_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: film_cast film_cast_film_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.film_cast
@@ -1564,7 +1643,7 @@ ALTER TABLE ONLY bluebox.film_cast
 
 
 --
--- Name: film_cast film_cast_person_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: film_cast film_cast_person_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.film_cast
@@ -1572,7 +1651,7 @@ ALTER TABLE ONLY bluebox.film_cast
 
 
 --
--- Name: film_crew film_crew_film_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: film_crew film_crew_film_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.film_crew
@@ -1580,7 +1659,7 @@ ALTER TABLE ONLY bluebox.film_crew
 
 
 --
--- Name: film_crew film_crew_person_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: film_crew film_crew_person_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.film_crew
@@ -1588,7 +1667,7 @@ ALTER TABLE ONLY bluebox.film_crew
 
 
 --
--- Name: film_production_company film_production_company_film_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: film_production_company film_production_company_film_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.film_production_company
@@ -1596,7 +1675,7 @@ ALTER TABLE ONLY bluebox.film_production_company
 
 
 --
--- Name: film_production_company film_production_company_production_company_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: film_production_company film_production_company_production_company_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.film_production_company
@@ -1604,7 +1683,7 @@ ALTER TABLE ONLY bluebox.film_production_company
 
 
 --
--- Name: inventory inventory_film_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: inventory inventory_film_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.inventory
@@ -1612,7 +1691,7 @@ ALTER TABLE ONLY bluebox.inventory
 
 
 --
--- Name: inventory inventory_store_id_fkkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: inventory inventory_store_id_fkkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.inventory
@@ -1620,7 +1699,7 @@ ALTER TABLE ONLY bluebox.inventory
 
 
 --
--- Name: payment payment_customer_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: payment payment_customer_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.payment
@@ -1628,7 +1707,7 @@ ALTER TABLE ONLY bluebox.payment
 
 
 --
--- Name: payment payment_rental_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: payment payment_rental_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.payment
@@ -1636,7 +1715,7 @@ ALTER TABLE ONLY bluebox.payment
 
 
 --
--- Name: rental rental_customer_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: rental rental_customer_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.rental
@@ -1644,7 +1723,7 @@ ALTER TABLE ONLY bluebox.rental
 
 
 --
--- Name: rental rental_inventory_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: rental rental_inventory_id_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.rental
@@ -1652,7 +1731,7 @@ ALTER TABLE ONLY bluebox.rental
 
 
 --
--- Name: store store_zip_code_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: postgres
+-- Name: store store_zip_code_fkey; Type: FK CONSTRAINT; Schema: bluebox; Owner: -
 --
 
 ALTER TABLE ONLY bluebox.store

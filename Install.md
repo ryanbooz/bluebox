@@ -20,14 +20,20 @@ docker run -d --name bluebox -p 5432:5432 -e POSTGRES_PASSWORD=password ryanbooz
 ## Restoring the database dump file
 Once you have a running container, you can use `psql` or your IDE of choice to create a new, empty database (I call it `bluebox`) and then restore the database to. For any `psql` command below, ensure you modify the host, port, or password as needed.
 
-> If you do not yet have `psql` and `pg_restore` installed on your machine, you can follow the directions [from this article](https://www.red-gate.com/simple-talk/databases/postgresql/postgresql-basics-getting-started-with-psql/) to get the tools installed. If you have PostgreSQL 16 already installed on your computer, you likely already have the necessary tools.
+> If you do not yet have `psql` and `pg_restore` installed on your machine, you can follow the directions [from this article](https://www.red-gate.com/simple-talk/databases/postgresql/postgresql-basics-getting-started-with-psql/) to get the tools installed. If you have PostgreSQL already installed on your computer, you likely already have the necessary tools.
+
+**First, you will need to unzip the data file to restore data into the sample database. Once that file is unzipped, you can proceed.**
+
+### Step 1: Create the database
 
 `psql -h localhost -U postgres -c 'CREATE DATABASE bluebox;'`
 
-Next, use `pg_restore` to restore the dump file into the newly created database.
+### Step 2: Restore schema and data
+Next, use `pg_restore` to restore the schema and data files into the newly created database.
 
-`pg_restore -h localhost -U postgres -d bluebox bluebox_v0.3.dump`
+`pg_restore -h localhost -U postgres -d bluebox -f bluebox_schema_v0.4.sql -f bluebox_v0.4_dataonly.sql`
 
+### Step 3: Update teh local statistics
 Finally, update the statistics in the database, which are not carried over in a dump.
 
 `psql -h localhost -U postgres -d bluebox -c 'ANALYZE;'`

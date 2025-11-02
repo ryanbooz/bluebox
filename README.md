@@ -64,8 +64,8 @@ There is a lot to do for this database to become more feature complete. I consid
 - Review and create proper indexing
   - For training, it's actually helpful to have missing indexes, but any full backup I provide should have reasonable indexing for other uses.
 - recreate some of the VIEWS that existed in Pagila using the updated schema
-- move application tables into a new, non-`public` schema
+- ~~move application tables into a new, non-`public` schema~~
 - remove the `staff` requirement
-- possibly rename some tables
-  - `person` (this is what TMDB calls actors/crew)
+- ~~possibly rename some tables~~
+  - ~~`person` (this is what TMDB calls actors/crew)~~
 - add partitioning back to the `payment` table and possibly `rentals` as well

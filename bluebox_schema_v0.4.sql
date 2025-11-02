@@ -484,7 +484,7 @@ CREATE PROCEDURE bluebox.generate_rental_history(IN data_start timestamp with ti
 		),
 		available_inventory AS ( 
 			SELECT i.* FROM bluebox.inventory i
-				INNER JOIN film f USING(film_id)
+				INNER JOIN bluebox.film f USING(film_id)
 			WHERE inventory_id not in (select inventory_id from outstanding_rentals) 
 				AND release_date <= rental_start
 		),

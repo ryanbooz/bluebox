@@ -31,7 +31,7 @@ Once you have a running container, you can use `psql` or your IDE of choice to c
 ### Step 2: Restore schema and data
 Next, use `pg_restore` to restore the schema and data files into the newly created database.
 
-`pg_restore -h localhost -U postgres -d bluebox -f bluebox_schema_v0.4.sql -f bluebox_v0.4_dataonly.sql`
+`psql -h localhost -U postgres -d bluebox -f bluebox_schema_v0.4.sql -f bluebox_dataonly_v0.4.sql`
 
 ### Step 3: Update teh local statistics
 Finally, update the statistics in the database, which are not carried over in a dump.
@@ -45,7 +45,7 @@ quickly and is easy to create your own with the included stored procedures.
 The `bluebox.generate_rental_history()` procedure can create up to one year of rental data at a time. To
 generate rental data for the last twelve months, try the following:
 
-`psql -h localhost -U postgres -d bluebox -c 'CALL bluebox.generate_rental_history(now()-'12 months'::interval, now());`
+`psql -h localhost -U postgres -d bluebox -c "CALL bluebox.generate_rental_history(now()-'12 months'::interval, now());"`
 
 ### Step 5: Login and explore!
 You can now log into your **bluebox** PostgreSQL database and begin exploring. Use an IDE like DBeaver

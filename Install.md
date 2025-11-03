@@ -14,7 +14,7 @@ docker run -d --name bluebox -p 5432:5432 -e POSTGRES_PASSWORD=password postgis/
 Alternatively, you can use the **bluebox** Docker image which includes a few other extensions and `pg_stat_statements` ready to go.
 
 ```bash
-docker run -d --name bluebox -p 5432:5432 -e POSTGRES_PASSWORD=password ryanbooz/bluebox-postgres
+docker run -d --name bluebox -p 5432:5432 -e POSTGRES_PASSWORD=password ryanbooz/bluebox-postgres:latest
 ```
 
 ## Restoring the database dump file
@@ -38,5 +38,16 @@ Finally, update the statistics in the database, which are not carried over in a 
 
 `psql -h localhost -U postgres -d bluebox -c 'ANALYZE;'`
 
-You can now log into your **bluebox** PostgreSQL database and begin exploring.
+### Step 4: Generate sample rental data
+This scripts don't contain sample rental data because it increases the size of the repository
+quickly and is easy to create your own with the included stored procedures.
+
+The `bluebox.generate_rental_history()` procedure can create up to one year of rental data at a time. To
+generate rental data for the last twelve months, try the following:
+
+`psql -h localhost -U postgres -d bluebox -c 'CALL bluebox.generate_rental_history(now()-'12 months'::interval, now());`
+
+### Step 5: Login and explore!
+You can now log into your **bluebox** PostgreSQL database and begin exploring. Use an IDE like DBeaver
+or the included `psql` command line tool for querying your data.
 

@@ -1,0 +1,19 @@
+{
+    "version": "1.1",
+    "postFilters":
+    [
+        {
+            "filterTarget": "property",
+            "filterBy": "name",
+            "filterValue": "privileges",
+            "effect": "exclude"
+        },
+        {
+            "filterTarget": "property",
+            "filterBy": "name",
+            "filterValue": "owner",
+            "effect": "exclude"
+        }
+    ]
+}
+

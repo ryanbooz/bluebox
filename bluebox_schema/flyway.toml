@@ -9,6 +9,8 @@ mixed = true
 outOfOrder = true
 schemaModelLocation = "schema-model"
 validateMigrationNaming = true
+baselineVersion = "001_20260121162755"
+baselineOnMigrate = true
 
   [flyway.check]
   majorTolerance = 0
@@ -25,8 +27,3 @@ detectRenames = "identical-only"
 
 [redgateCompare.postgresql.options.ignores]
 ignoreNewlinesInTextObjects = "off"
-
-[environments.dec]
-url = "jdbc:postgresql://localhost:5432/bluebox_dev"
-schemas = [ "public", "bluebox" ]
-displayName = "Bluebox DEV"

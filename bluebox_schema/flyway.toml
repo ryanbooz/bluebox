@@ -1,0 +1,32 @@
+databaseType = "PostgreSql"
+id = "bc5d9f8d-b0ba-45cc-8cd4-ad55d069bb4a"
+name = "bluebox_schema"
+
+[flyway]
+callbackLocations = [ "filesystem:callbacks" ]
+locations = [ "filesystem:migrations" ]
+mixed = true
+outOfOrder = true
+schemaModelLocation = "schema-model"
+validateMigrationNaming = true
+
+  [flyway.check]
+  majorTolerance = 0
+
+[flywayDesktop]
+developmentEnvironment = "development"
+shadowEnvironment = "shadow"
+
+[redgateCompare]
+filterFile = "filter.rgf"
+
+[redgateCompare.postgresql.options.behavior]
+detectRenames = "identical-only"
+
+[redgateCompare.postgresql.options.ignores]
+ignoreNewlinesInTextObjects = "off"
+
+[environments.dec]
+url = "jdbc:postgresql://localhost:5432/bluebox_dev"
+schemas = [ "public", "bluebox" ]
+displayName = "Bluebox DEV"

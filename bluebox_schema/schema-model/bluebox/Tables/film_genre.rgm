@@ -1,0 +1,21 @@
+table "bluebox"."film_genre" {
+  primaryKey = {
+    columns = [
+      "genre_id"
+    ]
+    name = "genre_pkey"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "genre_id" {
+      type = integer
+      null = NOT NULL
+      generatedAsIdentity = BY DEFAULT
+    }
+    column "name" {
+      type = text
+    }
+  )
+}
+

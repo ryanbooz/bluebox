@@ -1,0 +1,42 @@
+table "bluebox"."store" {
+  primaryKey = {
+    columns = [
+      "store_id"
+    ]
+    name = "store_pkey"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "store_id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "street_name" {
+      type = text
+    }
+    column "road_ref" {
+      type = text
+    }
+    column "phone" {
+      type = text
+    }
+    column "zip_code" {
+      type = integer
+    }
+    column "geog" {
+      type = public.geography(Point,4326)
+    }
+  )
+}
+
+foreignKey "bluebox"."store"."store_zip_code_fkey" {
+  columns = [
+    "zip_code"
+  ]
+  referencedTable = "bluebox"."zip_code_info"
+  referencedColumns = [
+    "zip_code"
+  ]
+}
+

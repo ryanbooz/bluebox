@@ -1,0 +1,72 @@
+table "bluebox"."payment" {
+  primaryKey = {
+    columns = [
+      "payment_date"
+      "payment_id"
+    ]
+    name = "payment_bak_pkey"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "payment_id" {
+      type = integer
+      null = NOT NULL
+      default = nextval('bluebox.payment_payment_id_seq'::regclass)
+    }
+    column "customer_id" {
+      type = integer
+      null = NOT NULL
+    }
+    column "rental_id" {
+      type = integer
+      null = NOT NULL
+    }
+    column "amount" {
+      type = numeric(5,2)
+      null = NOT NULL
+    }
+    column "payment_date" {
+      type = timestamp with time zone
+      null = NOT NULL
+    }
+  )
+}
+
+foreignKey "bluebox"."payment"."payment_customer_id_fkey" {
+  columns = [
+    "customer_id"
+  ]
+  referencedTable = "bluebox"."customer"
+  referencedColumns = [
+    "customer_id"
+  ]
+  onDelete = RESTRICT
+}
+
+foreignKey "bluebox"."payment"."payment_rental_id_fkey" {
+  columns = [
+    "rental_id"
+  ]
+  referencedTable = "bluebox"."rental"
+  referencedColumns = [
+    "rental_id"
+  ]
+  onDelete = CASCADE
+}
+
+index "bluebox"."payment_rental_id_amount_idx" {
+  table = "bluebox"."payment"
+  type = btree
+  columns = <
+    {
+      definition = rental_id
+    }
+
+  >
+  isUnique = False
+  includeColumns = [
+    amount
+  ]
+}
+

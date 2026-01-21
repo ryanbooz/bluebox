@@ -1,0 +1,72 @@
+table "bluebox"."customer" {
+  primaryKey = {
+    columns = [
+      "customer_id"
+    ]
+    name = "customer_pkey"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "customer_id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "store_id" {
+      type = integer
+      null = NOT NULL
+    }
+    column "full_name" {
+      type = text
+      null = NOT NULL
+    }
+    column "email" {
+      type = text
+    }
+    column "phone" {
+      type = text
+    }
+    column "zip_code" {
+      type = integer
+    }
+    column "activebool" {
+      type = boolean
+      null = NOT NULL
+      default = true
+    }
+    column "create_date" {
+      type = date
+      null = NOT NULL
+      default = CURRENT_DATE
+    }
+    column "geog" {
+      type = public.geography(Point,4326)
+    }
+    column "last_update" {
+      type = timestamp with time zone
+      default = now()
+    }
+  )
+}
+
+foreignKey "bluebox"."customer"."customer_store_id_fkey" {
+  columns = [
+    "store_id"
+  ]
+  referencedTable = "bluebox"."store"
+  referencedColumns = [
+    "store_id"
+  ]
+  onDelete = SET NULL
+}
+
+foreignKey "bluebox"."customer"."customer_zip_code_fkey" {
+  columns = [
+    "zip_code"
+  ]
+  referencedTable = "bluebox"."zip_code_info"
+  referencedColumns = [
+    "zip_code"
+  ]
+}
+

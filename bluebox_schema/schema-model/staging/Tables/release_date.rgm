@@ -1,0 +1,12 @@
+table "staging"."release_date" {
+  owner = postgres
+  columns = (
+    column "film_id" {
+      type = bigint
+    }
+    column "releases" {
+      type = jsonb
+    }
+  )
+}
+

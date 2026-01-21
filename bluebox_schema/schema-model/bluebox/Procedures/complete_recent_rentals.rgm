@@ -1,0 +1,96 @@
+procedure "bluebox"."complete_recent_rentals(interval, integer)" {
+  text = """
+
+ DECLARE 
+	pid int;
+ 	rid int;
+	cus_id int;
+	inv_id int;
+	sid int;
+	r_sid int;
+	tmp_rental_tablename TEXT;
+	sqlstr TEXT;
+ BEGIN
+	 
+	SELECT pg_backend_pid() INTO pid; 
+	
+	tmp_rental_tablename = 'tmp_open_rentals_' || pid::TEXT;
+ 
+	RAISE NOTICE '%',tmp_rental_tablename;
+
+	EXECUTE FORMAT($$CREATE TEMPORARY TABLE %1$I (
+		rental_id int,
+		customer_id int,
+		inventory_id int,
+		store_id int
+	);$$,tmp_rental_tablename);
+
+
+	EXECUTE FORMAT($$INSERT INTO %1$I 
+	SELECT rental_id, customer_id, inventory_id, store_id FROM bluebox.rental WHERE upper(rental_period) IS NULL 
+		AND lower(rental_period) < now()-%2$L::INTERVAL;$$,tmp_rental_tablename,min_rental_interval);
+
+
+	EXECUTE 'ANALYZE ' || tmp_rental_tablename;
+	-- sample 0.01% of the rows from available customers for the given day 
+	-- loop over them and
+
+	FOR rid,cus_id,inv_id,r_sid IN EXECUTE FORMAT('SELECT rental_id, customer_id, inventory_id,store_id FROM %1$I TABLESAMPLE bernoulli(random_between(10,20,1))',tmp_rental_tablename)
+ 	LOOP
+	 	-- update the rental end period to be between 16 hours and 4 days from initial rental.
+	 	-- end the rental between 16 hours and 96 hours after start
+	 	UPDATE bluebox.rental SET rental_period = tstzrange(lower(rental_period), (lower(rental_period) + (random_between(57600,345600)::TEXT || ' seconds')::INTERVAL))
+	 	WHERE rental_id = rid;
+	 
+	 	-- Find a store that's within the specified distance. This will give some randomness
+	 	-- to the rental locations for each customer
+	 	WITH store_inv AS (
+			SELECT s.store_id, ST_Distance(s.geog,cus.geog) dist FROM bluebox.store s,
+				bluebox.customer cus
+			WHERE ST_DWithin(s.geog,cus.geog,max_store_dist)
+				AND cus.customer_id = cus_id
+			ORDER BY random()
+			LIMIT 1
+		)
+		SELECT store_id INTO sid FROM store_inv;
+	
+		IF sid IS NULL THEN
+			sid := r_sid;
+		END IF;
+	
+        UPDATE bluebox.inventory SET store_id = sid
+		WHERE inventory_id = inv_id; 
+		
+		COMMIT;
+		
+		sid:=NULL;
+	
+		CALL bluebox.insert_single_payment(rid);
+		
+ 	end LOOP;	 
+	 
+ 	EXECUTE 'DROP TABLE ' || tmp_rental_tablename;
+
+
+ END;
+"""
+  arguments = <
+    {
+      name = min_rental_interval
+      type = interval
+      mode = IN
+      default = '24:00:00'::interval
+    }
+
+    {
+      name = max_store_dist
+      type = integer
+      mode = IN
+      default = 25000
+    }
+
+  >
+  language = plpgsql
+  owner = postgres
+}
+

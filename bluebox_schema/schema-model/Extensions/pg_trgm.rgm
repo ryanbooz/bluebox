@@ -1,0 +1,5 @@
+extension "pg_trgm" {
+  version = 1.6
+  schema = "public"
+}
+

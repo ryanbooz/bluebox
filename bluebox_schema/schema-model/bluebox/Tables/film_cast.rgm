@@ -1,0 +1,64 @@
+table "bluebox"."film_cast" {
+  primaryKey = {
+    columns = [
+      "film_id"
+      "person_id"
+    ]
+    name = "film_cast_pk"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "film_id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "person_id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "film_character" {
+      type = text
+      null = NOT NULL
+    }
+  )
+}
+
+foreignKey "bluebox"."film_cast"."film_cast_film_id_fkey" {
+  columns = [
+    "film_id"
+  ]
+  referencedTable = "bluebox"."film"
+  referencedColumns = [
+    "film_id"
+  ]
+  onDelete = CASCADE
+}
+
+foreignKey "bluebox"."film_cast"."film_cast_person_id_fkey" {
+  columns = [
+    "person_id"
+  ]
+  referencedTable = "bluebox"."person"
+  referencedColumns = [
+    "person_id"
+  ]
+  onDelete = CASCADE
+}
+
+index "bluebox"."film_person_id_film_id_idx" {
+  table = "bluebox"."film_cast"
+  type = btree
+  columns = <
+    {
+      definition = person_id
+    }
+
+    {
+      definition = film_id
+    }
+
+  >
+  isUnique = False
+}
+

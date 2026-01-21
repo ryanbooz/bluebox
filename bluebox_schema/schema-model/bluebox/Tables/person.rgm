@@ -1,0 +1,46 @@
+table "bluebox"."person" {
+  primaryKey = {
+    columns = [
+      "person_id"
+    ]
+    name = "person_pkey"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "person_id" {
+      type = bigint
+      null = NOT NULL
+      generatedAsIdentity = BY DEFAULT
+    }
+    column "name" {
+      type = text
+      null = NOT NULL
+    }
+    column "also_known_as" {
+      type = text[]
+    }
+    column "birth_date" {
+      type = date
+    }
+    column "death_date" {
+      type = date
+    }
+    column "gender" {
+      type = integer
+    }
+    column "popularity" {
+      type = real
+    }
+    column "imdb_id" {
+      type = text
+    }
+    column "biography" {
+      type = text
+    }
+    column "place_of_birth" {
+      type = text
+    }
+  )
+}
+

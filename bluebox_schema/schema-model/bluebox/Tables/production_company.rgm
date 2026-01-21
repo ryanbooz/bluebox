@@ -1,0 +1,21 @@
+table "bluebox"."production_company" {
+  primaryKey = {
+    columns = [
+      "production_company_id"
+    ]
+    name = "production_company_pkey"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "production_company_id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "production_company_name" {
+      type = text
+      null = NOT NULL
+    }
+  )
+}
+

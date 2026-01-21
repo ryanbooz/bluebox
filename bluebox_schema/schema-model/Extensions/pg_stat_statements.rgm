@@ -1,0 +1,5 @@
+extension "pg_stat_statements" {
+  version = 1.11
+  schema = "public"
+}
+

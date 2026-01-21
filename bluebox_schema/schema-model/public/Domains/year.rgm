@@ -1,0 +1,5 @@
+domain "public"."year" {
+  type = integer
+  owner = postgres
+}
+

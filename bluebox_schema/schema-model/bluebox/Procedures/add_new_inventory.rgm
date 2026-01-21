@@ -1,0 +1,62 @@
+procedure "bluebox"."add_new_inventory()" {
+  text = """
+
+DECLARE
+	storeid int;
+	maxrd date;
+BEGIN 
+	/*
+ * This query was a first attempt to fill the inventory
+ * table with some kind relevance - ie. newer, popular movies
+ * get more copies than older or less popular movies.
+ */
+	FOR storeid IN SELECT store_id FROM bluebox.store
+	LOOP
+		SELECT max(release_date) INTO maxrd FROM bluebox.inventory i
+			JOIN bluebox.film f USING(film_id)
+		WHERE store_id=storeid;
+		
+		WITH inventory_tmp (film_id, popularity, total_i, release_date) AS (
+			SELECT f.film_id, f.popularity, CASE
+				WHEN f.popularity <= 20 THEN ARRAY[0,3]
+				WHEN f.popularity BETWEEN 20 AND 35 THEN ARRAY[0,5]
+				WHEN f.popularity BETWEEN 35 AND 75 THEN ARRAY[2,6]
+				WHEN f.popularity BETWEEN 75 AND 100 THEN ARRAY[5,8]
+				WHEN f.popularity BETWEEN 100 AND 500 THEN ARRAY[8,12]
+				WHEN f.popularity >500 THEN ARRAY[12,20]
+				END,
+				release_date
+			FROM bluebox.film f
+				WHERE film_id NOT IN (SELECT count(DISTINCT film_id) FROM bluebox.inventory WHERE store_id=storeid)
+					AND release_date > maxrd
+		),
+		adjusted_inventory AS (
+			SELECT it.film_id, it.popularity, 
+			CASE 
+				WHEN release_date > now()-'1 year'::INTERVAL THEN it.total_i
+				WHEN release_date BETWEEN now()-'3 years'::INTERVAL AND now()-'1 year'::INTERVAL THEN
+					array_agg(greatest(val-1,0))
+				WHEN release_date BETWEEN now()-'4 years'::INTERVAL AND now()-'3 year'::INTERVAL THEN
+					array_agg(greatest(val-2,0))
+				WHEN release_date < now()-'4 years'::INTERVAL THEN
+					array_agg(greatest(val-3,0))
+			END AS total_i
+			FROM inventory_tmp it, unnest(it.total_i) AS val
+			GROUP BY it.film_id, it.popularity, it.release_date, it.total_i
+		)
+--		SELECT * FROM adjusted_inventory;
+		INSERT INTO bluebox.inventory (film_id, store_id)
+		SELECT film_id, storeid
+		FROM adjusted_inventory ai, random_between(ai.total_i[1],ai.total_i[2]) x(i), generate_series(1,x.i)
+		WHERE x.i>0;
+
+	COMMIT;
+	END LOOP;
+END;
+"""
+  arguments = [
+  ]
+  language = plpgsql
+  owner = postgres
+}
+

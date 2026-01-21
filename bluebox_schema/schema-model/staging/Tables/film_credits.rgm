@@ -1,0 +1,28 @@
+table "staging"."film_credits" {
+  primaryKey = {
+    columns = [
+      "film_id"
+    ]
+    name = "film_credits_pkey"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "film_id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "cast" {
+      type = jsonb
+    }
+    column "crew" {
+      type = jsonb
+    }
+    column "id" {
+      type = integer
+      null = NOT NULL
+      generatedAsIdentity = BY DEFAULT
+    }
+  )
+}
+

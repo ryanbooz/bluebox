@@ -1,0 +1,77 @@
+table "bluebox"."inventory" {
+  primaryKey = {
+    columns = [
+      "inventory_id"
+    ]
+    name = "inventory_pk"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "inventory_id" {
+      type = integer
+      null = NOT NULL
+      default = nextval('bluebox.inventory_inventory_id_seq'::regclass)
+    }
+    column "film_id" {
+      type = integer
+      null = NOT NULL
+    }
+    column "store_id" {
+      type = integer
+      null = NOT NULL
+    }
+    column "last_update" {
+      type = timestamp with time zone
+      null = NOT NULL
+      default = now()
+    }
+  )
+}
+
+foreignKey "bluebox"."inventory"."inventory_film_id_fkey" {
+  columns = [
+    "film_id"
+  ]
+  referencedTable = "bluebox"."film"
+  referencedColumns = [
+    "film_id"
+  ]
+  onDelete = RESTRICT
+}
+
+foreignKey "bluebox"."inventory"."inventory_store_id_fkkey" {
+  columns = [
+    "store_id"
+  ]
+  referencedTable = "bluebox"."store"
+  referencedColumns = [
+    "store_id"
+  ]
+  onDelete = RESTRICT
+}
+
+index "bluebox"."inventory_film_id_idx" {
+  table = "bluebox"."inventory"
+  type = btree
+  columns = <
+    {
+      definition = film_id
+    }
+
+  >
+  isUnique = False
+}
+
+index "bluebox"."inventory_store_id_idx" {
+  table = "bluebox"."inventory"
+  type = btree
+  columns = <
+    {
+      definition = store_id
+    }
+
+  >
+  isUnique = False
+}
+

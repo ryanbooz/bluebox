@@ -1,0 +1,19 @@
+table "bluebox"."holiday" {
+  owner = postgres
+  columns = (
+    column "id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "holiday_name" {
+      type = text
+    }
+    column "is_paid_time_off" {
+      type = boolean
+    }
+    column "holiday_date" {
+      type = date
+    }
+  )
+}
+

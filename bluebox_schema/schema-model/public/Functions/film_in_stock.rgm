@@ -1,0 +1,34 @@
+function "public"."film_in_stock(integer, integer)" {
+  text = """
+
+     SELECT inventory_id
+     FROM inventory
+     WHERE film_id = $1
+     AND store_id = $2
+     AND inventory_in_stock(inventory_id);
+"""
+  returnType = SETOF integer
+  arguments = <
+    {
+      name = p_film_id
+      type = integer
+      mode = IN
+    }
+
+    {
+      name = p_store_id
+      type = integer
+      mode = IN
+    }
+
+    {
+      name = p_film_count
+      type = integer
+      mode = OUT
+    }
+
+  >
+  language = sql
+  owner = postgres
+}
+

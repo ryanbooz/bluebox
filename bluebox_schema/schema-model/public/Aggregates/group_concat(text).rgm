@@ -1,0 +1,6 @@
+aggregate "public"."group_concat(text)" {
+  transitionFunction = public._group_concat
+  stateType = text
+  owner = postgres
+}
+

@@ -1,0 +1,39 @@
+function "public"."random_between(numeric, numeric, integer)" {
+  text = """
+
+ DECLARE
+ 	value NUMERIC = random()* (min_val - max_val) + max_val;
+BEGIN
+   IF round_to = 0 THEN 
+	 RETURN floor(value);
+   ELSE 
+   	 RETURN round(value,round_to);
+   END IF;
+END
+"""
+  returnType = numeric
+  arguments = <
+    {
+      name = min_val
+      type = numeric
+      mode = IN
+    }
+
+    {
+      name = max_val
+      type = numeric
+      mode = IN
+    }
+
+    {
+      name = round_to
+      type = integer
+      mode = IN
+      default = 0
+    }
+
+  >
+  language = plpgsql
+  owner = postgres
+}
+

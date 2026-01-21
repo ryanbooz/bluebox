@@ -1,0 +1,30 @@
+procedure "staging"."transform_credits()" {
+  text = """
+	
+ BEGIN 
+	WITH cast_temp AS (
+		SELECT film_id, (x->>'id')::bigint id, 1 credit_type, (x->>'gender')::int gender, 
+			x->>'character' "character", NULL department, NULL job 
+		FROM staging.film_credits, jsonb_array_elements("cast") x
+	)
+	INSERT INTO staging.film_cast
+	SELECT film_id, id, "character" FROM cast_temp
+	ON CONFLICT ON CONSTRAINT film_cast_pk DO NOTHING;
+	
+	WITH crew_temp AS ( 
+		SELECT film_id, (x->>'id')::bigint id, 2 credit_type, (x->>'gender')::int gender,
+			NULL "character", x->>'department' department, x->>'job' job
+		FROM staging.film_credits, jsonb_array_elements("crew") x
+	)
+	INSERT INTO staging.film_crew
+	SELECT film_id, id, department, job FROM crew_temp
+	ON CONFLICT ON CONSTRAINT film_crew_pk DO NOTHING; 
+	
+	END;
+"""
+  arguments = [
+  ]
+  language = plpgsql
+  owner = postgres
+}
+

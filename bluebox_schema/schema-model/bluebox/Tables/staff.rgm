@@ -1,0 +1,50 @@
+table "bluebox"."staff" {
+  owner = postgres
+  columns = (
+    column "staff_id" {
+      type = integer
+      null = NOT NULL
+      default = nextval('bluebox.staff_staff_id_seq'::regclass)
+    }
+    column "first_name" {
+      type = text
+      null = NOT NULL
+    }
+    column "last_name" {
+      type = text
+      null = NOT NULL
+    }
+    column "address_id" {
+      type = integer
+      null = NOT NULL
+    }
+    column "email" {
+      type = text
+    }
+    column "store_id" {
+      type = integer
+      null = NOT NULL
+    }
+    column "active" {
+      type = boolean
+      null = NOT NULL
+      default = true
+    }
+    column "username" {
+      type = text
+      null = NOT NULL
+    }
+    column "password" {
+      type = text
+    }
+    column "last_update" {
+      type = timestamp with time zone
+      null = NOT NULL
+      default = now()
+    }
+    column "picture" {
+      type = bytea
+    }
+  )
+}
+

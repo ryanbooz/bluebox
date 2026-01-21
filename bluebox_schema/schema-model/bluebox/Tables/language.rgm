@@ -1,0 +1,20 @@
+table "bluebox"."language" {
+  owner = postgres
+  columns = (
+    column "language_id" {
+      type = integer
+      null = NOT NULL
+      default = nextval('bluebox.language_language_id_seq'::regclass)
+    }
+    column "name" {
+      type = character(20)
+      null = NOT NULL
+    }
+    column "last_update" {
+      type = timestamp with time zone
+      null = NOT NULL
+      default = now()
+    }
+  )
+}
+

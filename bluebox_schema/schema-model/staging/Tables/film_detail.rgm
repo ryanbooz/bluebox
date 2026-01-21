@@ -1,0 +1,25 @@
+table "staging"."film_detail" {
+  owner = postgres
+  columns = (
+    column "film_id" {
+      type = bigint
+    }
+    column "budget" {
+      type = bigint
+    }
+    column "revenue" {
+      type = bigint
+    }
+    column "runtime" {
+      type = integer
+    }
+    column "production_companies" {
+      type = jsonb
+    }
+    column "processed" {
+      type = boolean
+      default = false
+    }
+  )
+}
+

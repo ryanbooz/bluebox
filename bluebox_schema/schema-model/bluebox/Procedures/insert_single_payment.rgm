@@ -1,0 +1,32 @@
+procedure "bluebox"."insert_single_payment(integer)" {
+  text = """
+	
+ DECLARE
+ 	rental_rate float4 = 1.99;
+ BEGIN 
+	WITH payment_info AS (
+		SELECT rental_id, rental_period, GREATEST(CEILING(EXTRACT(epoch from (upper(rental_period)-lower(rental_period)))/3600/24),1) rental_days,
+			inventory_id, customer_id, upper(rental_period) AS payment_date
+		FROM bluebox.rental r
+			INNER JOIN bluebox.inventory i USING(inventory_id)
+			INNER JOIN bluebox.film f USING(film_id)
+		WHERE r.rental_id = rid
+	)
+	INSERT INTO bluebox.payment (customer_id, rental_id, amount, payment_date)
+	SELECT customer_id, rental_id, rental_days*rental_rate AS amount, payment_date
+		FROM payment_info;
+	
+	END;
+"""
+  arguments = <
+    {
+      name = rid
+      type = integer
+      mode = IN
+    }
+
+  >
+  language = plpgsql
+  owner = postgres
+}
+

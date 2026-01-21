@@ -1,0 +1,42 @@
+function "public"."get_inventory()" {
+  text = """-
+
+BEGIN
+	RETURN query 
+	WITH inventory_tmp (film_id, popularity, total_i, release_date) AS (
+	SELECT f.film_id, f.popularity, CASE
+		WHEN f.popularity <= 20 THEN ARRAY[0,2]
+		WHEN f.popularity BETWEEN 20 AND 35 THEN ARRAY[0,2]
+		WHEN f.popularity BETWEEN 35 AND 75 THEN ARRAY[1,3]
+		WHEN f.popularity BETWEEN 75 AND 100 THEN ARRAY[2,6]
+		WHEN f.popularity BETWEEN 100 AND 500 THEN ARRAY[3,6]
+		WHEN f.popularity >500 THEN ARRAY[6,10]
+		END,
+		release_date
+	FROM film f
+),
+adjusted_inventory AS (
+	SELECT it.film_id, it.popularity, 
+	CASE 
+		WHEN release_date > now()-'1 year'::INTERVAL THEN it.total_i
+		WHEN release_date BETWEEN now()-'3 years'::INTERVAL AND now()-'1 year'::INTERVAL THEN
+			array_agg(greatest(val-1,0))
+		WHEN release_date BETWEEN now()-'4 years'::INTERVAL AND now()-'3 year'::INTERVAL THEN
+			array_agg(greatest(val-2,0))
+		WHEN release_date < now()-'3 years'::INTERVAL THEN
+			array_agg(greatest(val-3,0))
+	END AS total_i
+	FROM inventory_tmp it, unnest(it.total_i) AS val
+	GROUP BY it.film_id, it.popularity, it.release_date, it.total_i
+)
+SELECT ai.film_id, ai.popularity, ai.total_i, x.i FROM adjusted_inventory ai, random_between(ai.total_i[1],ai.total_i[2]) x(i);
+
+END; 
+"""
+  returnType = TABLE(film_id bigint, popularity real, total_i integer[], x numeric)
+  arguments = [
+  ]
+  language = plpgsql
+  owner = postgres
+}
+

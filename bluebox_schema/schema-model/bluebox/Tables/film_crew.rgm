@@ -1,0 +1,50 @@
+table "bluebox"."film_crew" {
+  primaryKey = {
+    columns = [
+      "film_id"
+      "person_id"
+    ]
+    name = "film_crew_pk"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "film_id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "person_id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "department" {
+      type = text
+    }
+    column "job" {
+      type = text
+    }
+  )
+}
+
+foreignKey "bluebox"."film_crew"."film_crew_film_id_fkey" {
+  columns = [
+    "film_id"
+  ]
+  referencedTable = "bluebox"."film"
+  referencedColumns = [
+    "film_id"
+  ]
+  onDelete = CASCADE
+}
+
+foreignKey "bluebox"."film_crew"."film_crew_person_id_fkey" {
+  columns = [
+    "person_id"
+  ]
+  referencedTable = "bluebox"."person"
+  referencedColumns = [
+    "person_id"
+  ]
+  onDelete = CASCADE
+}
+

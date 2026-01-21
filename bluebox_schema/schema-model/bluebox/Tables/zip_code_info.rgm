@@ -1,0 +1,83 @@
+table "bluebox"."zip_code_info" {
+  primaryKey = {
+    columns = [
+      "zip_code"
+    ]
+    name = "zip_code_info_pk"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "zip_code" {
+      type = integer
+      null = NOT NULL
+    }
+    column "lat" {
+      type = real
+    }
+    column "lng" {
+      type = real
+    }
+    column "city" {
+      type = character varying(50)
+    }
+    column "state_id" {
+      type = character varying(50)
+    }
+    column "state_name" {
+      type = character varying(50)
+    }
+    column "zcta" {
+      type = boolean
+    }
+    column "parent_zcta" {
+      type = character varying(50)
+    }
+    column "population" {
+      type = integer
+    }
+    column "density" {
+      type = real
+    }
+    column "county_fips" {
+      type = integer
+    }
+    column "county_name" {
+      type = character varying(50)
+    }
+    column "county_weights" {
+      type = character varying(128)
+    }
+    column "county_names_all" {
+      type = character varying(64)
+    }
+    column "county_fips_all" {
+      type = character varying(50)
+    }
+    column "imprecise" {
+      type = boolean
+    }
+    column "military" {
+      type = boolean
+    }
+    column "timezone" {
+      type = character varying(50)
+    }
+    column "geog" {
+      type = public.geography(Point,4326)
+    }
+  )
+}
+
+index "bluebox"."us_postal_code_geog_gix" {
+  table = "bluebox"."zip_code_info"
+  type = gist
+  columns = <
+    {
+      definition = geog
+    }
+
+  >
+  isUnique = False
+}
+

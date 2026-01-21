@@ -1,0 +1,134 @@
+table "bluebox"."rental" {
+  primaryKey = {
+    columns = [
+      "rental_id"
+    ]
+    name = "rental_pkey"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "rental_id" {
+      type = bigint
+      null = NOT NULL
+      generatedAsIdentity = BY DEFAULT
+    }
+    column "rental_period" {
+      type = tstzrange
+    }
+    column "inventory_id" {
+      type = integer
+      null = NOT NULL
+    }
+    column "customer_id" {
+      type = integer
+      null = NOT NULL
+    }
+    column "last_update" {
+      type = timestamp with time zone
+      null = NOT NULL
+      default = now()
+    }
+    column "store_id" {
+      type = integer
+    }
+  )
+}
+
+foreignKey "bluebox"."rental"."rental_customer_id_fkey" {
+  columns = [
+    "customer_id"
+  ]
+  referencedTable = "bluebox"."customer"
+  referencedColumns = [
+    "customer_id"
+  ]
+  onDelete = RESTRICT
+}
+
+foreignKey "bluebox"."rental"."rental_inventory_id_fkey" {
+  columns = [
+    "inventory_id"
+  ]
+  referencedTable = "bluebox"."inventory"
+  referencedColumns = [
+    "inventory_id"
+  ]
+  onDelete = RESTRICT
+}
+
+index "bluebox"."idx_rental_rental_date_brin" {
+  table = "bluebox"."rental"
+  type = brin
+  columns = <
+    {
+      definition = lower(rental_period)
+    }
+
+  >
+  isUnique = False
+}
+
+index "bluebox"."rental_customer_id_idx" {
+  table = "bluebox"."rental"
+  type = btree
+  columns = <
+    {
+      definition = customer_id
+    }
+
+  >
+  isUnique = False
+}
+
+index "bluebox"."rental_inventory_id_idx" {
+  table = "bluebox"."rental"
+  type = btree
+  columns = <
+    {
+      definition = inventory_id
+    }
+
+  >
+  isUnique = False
+}
+
+index "bluebox"."rental_rental_period_idx" {
+  table = "bluebox"."rental"
+  type = gist
+  columns = <
+    {
+      definition = rental_period
+    }
+
+  >
+  isUnique = False
+}
+
+index "bluebox"."rental_rental_period_upper_null" {
+  table = "bluebox"."rental"
+  type = btree
+  columns = <
+    {
+      definition = upper(rental_period)
+    }
+
+  >
+  isUnique = False
+  whereClause = """-
+(upper(rental_period) IS NULL)
+"""
+}
+
+index "bluebox"."rental_store_id_idx" {
+  table = "bluebox"."rental"
+  type = btree
+  columns = <
+    {
+      definition = store_id
+    }
+
+  >
+  isUnique = False
+}
+

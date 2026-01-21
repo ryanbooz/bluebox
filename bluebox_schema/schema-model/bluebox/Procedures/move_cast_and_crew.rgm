@@ -1,0 +1,48 @@
+procedure "bluebox"."move_cast_and_crew()" {
+  text = """
+
+BEGIN
+	/*
+	 * Hopefully not needed anymore, but keeping for safety. At some
+	 * points during development films would exist in the staging tables
+	 * but not in the main table, which should happen. In most cases I checked
+	 * the films weren't of value anyway, and I suspected that IDs changed between
+	 * API runs over a few months of development (and not cleaning old record
+	 * up along the way)
+	 */
+	DELETE FROM staging.film_crew WHERE film_id IN (
+	SELECT DISTINCT(fc.film_id) FROM
+		staging.film_crew fc
+		LEFT JOIN bluebox.film f USING (film_id)
+		WHERE f.film_id IS NULL 
+	);
+	
+	DELETE FROM staging.film_cast WHERE film_id IN (
+	SELECT DISTINCT(fc.film_id) FROM
+		staging.film_cast fc
+		LEFT JOIN bluebox.film f USING (film_id)
+		WHERE f.film_id IS NULL 
+	);
+	
+	/*
+	 * Now insert any crew records that don't exist in the main 
+	 * film_crew table or film_cast table
+	 */
+	INSERT INTO bluebox.film_crew (film_id, person_id, department, job)
+	SELECT film_id, person_id, fc.department, fc.job FROM staging.film_crew fc
+		LEFT JOIN bluebox.film_crew fc1 using(film_id, person_id)
+	WHERE fc1.person_id IS NULL AND fc1.film_id IS NULL;
+	
+	
+	INSERT INTO bluebox.film_cast (film_id, person_id, film_character)
+	SELECT film_id, person_id, fc.film_character FROM staging.film_cast fc
+		LEFT JOIN bluebox.film_cast fc1 using(film_id,person_id)
+	WHERE fc1.person_id IS NULL AND fc1.film_id IS NULL;
+END;
+"""
+  arguments = [
+  ]
+  language = plpgsql
+  owner = postgres
+}
+

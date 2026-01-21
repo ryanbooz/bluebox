@@ -1,0 +1,28 @@
+table "staging"."film_crew" {
+  primaryKey = {
+    columns = [
+      "film_id"
+      "person_id"
+    ]
+    name = "film_crew_pk"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "film_id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "person_id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "department" {
+      type = text
+    }
+    column "job" {
+      type = text
+    }
+  )
+}
+

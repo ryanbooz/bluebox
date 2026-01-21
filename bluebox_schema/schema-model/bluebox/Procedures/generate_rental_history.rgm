@@ -1,0 +1,168 @@
+procedure "bluebox"."generate_rental_history(timestamp with time zone, timestamp with time zone, numeric, numeric, double precision, integer, boolean)" {
+  text = """
+
+ DECLARE cus record;
+	rental_start timestamptz;
+    rental_nextday timestamptz;
+	cust_percent float4;
+	total_cus bigint;
+ BEGIN
+	 
+	IF data_start > data_end THEN
+		RAISE EXCEPTION 'End date must be after start date!';
+	END IF;
+	
+	IF (data_end-data_start) > '366 days'::INTERVAL THEN
+		RAISE EXCEPTION 'You can only do one year at time! %', (data_end-data_start);
+	END IF;
+
+	rental_start = data_start;
+
+	WHILE rental_start <= data_end THEN
+	LOOP -- daily LOOP FOR rentals
+	
+		-- this is used during the INSERT and pulled out here for visibility
+		rental_nextday = rental_start + '1 day'::INTERVAL;
+		SELECT pct INTO cust_percent FROM random_between(min_cust_pct,max_cust_pct,3) x(pct);
+		
+		IF EXISTS (SELECT 1 FROM bluebox.holiday WHERE holiday_date::timestamptz <@ tstzrange(rental_start,rental_nextday)) THEN 
+			IF print_debug THEN
+				RAISE NOTICE 'It is a holiday!';
+			END IF;
+			SELECT pct INTO cust_percent FROM random_between((min_cust_pct*holiday_multiplier)::numeric,(max_cust_pct*holiday_multiplier)::numeric,3) x(pct);
+		END IF;
+	
+		IF print_debug THEN
+			RAISE NOTICE 'customer pct: %', cust_percent;
+			RAISE NOTICE 'begin: find customers and inventory: %', clock_timestamp();		
+		END IF;
+	
+		-- 
+	    SELECT (reltuples::bigint*(cust_percent/100))::int into total_cus FROM pg_class WHERE oid = 'bluebox.customer'::regclass;
+
+		IF print_debug THEN				
+			RAISE NOTICE 'total customers to rent for today: %', total_cus;		
+		END IF;
+
+		WITH outstanding_rentals AS MATERIALIZED (
+			SELECT * FROM bluebox.rental
+			WHERE rental_period @> tstzrange(rental_start, rental_nextday)
+		),
+		rental_customers AS MATERIALIZED (
+			SELECT c.* FROM bluebox.customer c
+				WHERE customer_id not in (select customer_id from outstanding_rentals)
+			ORDER BY random()
+			LIMIT total_cus
+		),
+		available_inventory AS ( 
+			SELECT i.* FROM bluebox.inventory i
+				INNER JOIN bluebox.film f USING(film_id)
+			WHERE inventory_id not in (select inventory_id from outstanding_rentals) 
+				AND release_date <= rental_start
+		),
+		customer_stores as (
+			SELECT c.customer_id, c.store_id home_store_id, store_ids,
+				row_number() OVER (PARTITION BY store_ids[1] ORDER BY random()) AS rn
+			FROM rental_customers c
+			inner join lateral (
+				select customer_id, array_agg(s.store_id) store_ids FROM
+				( 
+					SELECT store_id
+					from bluebox.store s
+					WHERE ST_DWithin(s.geog,c.geog,store_distance)
+					ORDER BY random()
+					LIMIT 2 
+				) s
+			) t on true
+		),
+		random_inv AS (
+			SELECT *, row_number() OVER (PARTITION BY store_id ORDER BY random()) AS rn
+			FROM available_inventory
+		),
+		random_rental AS (
+			SELECT *, (rental_start + trunc(random() * 1439) * '1 minute'::INTERVAL) as rental_start2 FROM customer_stores cs
+			JOIN random_inv ri ON ri.store_id = cs.store_ids[1]
+			AND ri.rn = cs.rn
+		),
+		create_rentals as (
+			INSERT INTO bluebox.rental (rental_period, inventory_id, customer_id, store_id)
+				-- Rentals are at least 10 hours in length and up to ~3.5 days (3 days + 10 hours) for historical data
+				SELECT tstzrange(rental_start2,(rental_start2 + (trunc(random() * 4320) + 600) * '1 minute'::INTERVAL)) AS rental_period,
+					inventory_id,
+					customer_id,
+					store_ids[1]
+				FROM random_rental
+		)
+		update bluebox.inventory i set store_id = coalesce(rr.store_ids[2], rr.store_ids[1])
+		 from random_rental rr where rr.inventory_id = i.inventory_id;
+		
+		-- commit current day of rentals
+	    COMMIT;
+		
+		-- Create the payments for any rentals that started on this date
+		CALL bluebox.insert_payments(rental_start::date);
+	
+		-- Move to the next day in the cycle
+		rental_start = rental_nextday;
+		
+		IF print_debug THEN
+			RAISE NOTICE 'Next day: %', rental_start;
+		END IF;
+
+	end LOOP; -- WHILE LOOP
+
+ END;
+"""
+  arguments = <
+    {
+      name = data_start
+      type = timestamp with time zone
+      mode = IN
+    }
+
+    {
+      name = data_end
+      type = timestamp with time zone
+      mode = IN
+    }
+
+    {
+      name = min_cust_pct
+      type = numeric
+      mode = IN
+      default = 0.8
+    }
+
+    {
+      name = max_cust_pct
+      type = numeric
+      mode = IN
+      default = 2.5
+    }
+
+    {
+      name = holiday_multiplier
+      type = double precision
+      mode = IN
+      default = 2.5
+    }
+
+    {
+      name = store_distance
+      type = integer
+      mode = IN
+      default = 25000
+    }
+
+    {
+      name = print_debug
+      type = boolean
+      mode = IN
+      default = false
+    }
+
+  >
+  language = plpgsql
+  owner = postgres
+}
+

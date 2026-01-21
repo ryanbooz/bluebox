@@ -1,0 +1,65 @@
+procedure "bluebox"."generate_individual_rental(integer)" {
+  text = """
+
+ DECLARE cus record;
+	c_id int;
+	c_sid int;
+	inv_id int;
+	rental_start timestamptz;
+    rental_nextday timestamptz;
+    rental_range tstzrange;
+	sqlstr TEXT;
+	pid int;
+	tmp_cust_tablename TEXT;
+	tmp_inv_tablename TEXT;
+ BEGIN
+
+	rental_start = now();
+	
+	-- Get a random customer to rent a movie for
+	SELECT customer_id INTO c_id FROM customer 
+		WHERE customer_id NOT IN (SELECT customer_id from rental WHERE rental_period @> rental_start)
+		ORDER BY random()
+		LIMIT 1;
+	
+	
+	WITH rental_store AS (
+		SELECT s.store_id, ST_Distance(s.geog,c.geog) dist FROM bluebox.store s,
+			bluebox.customer c
+		WHERE ST_DWithin(s.geog,c.geog,max_store_dist)
+			AND c.customer_id = c_id
+		ORDER BY random()
+		LIMIT 1
+	)
+	SELECT store_id INTO c_sid FROM rental_store;
+	 	
+ 	SELECT inventory_id INTO inv_id FROM inventory
+ 		WHERE inventory_id NOT IN (SELECT inventory_id FROM rental WHERE rental_period @> rental_start)
+ 			AND store_id = c_sid
+ 		ORDER BY random()
+ 		LIMIT 1;
+	 	
+	IF (inv_id IS NOT NULL) THEN  	
+		INSERT INTO bluebox.rental (rental_period, inventory_id, customer_id, store_id)
+			 	VALUES (tstzrange(rental_start,NULL),
+					inv_id,
+					c_id,
+					c_sid); 
+	END IF;
+
+	COMMIT;	
+ END;
+"""
+  arguments = <
+    {
+      name = max_store_dist
+      type = integer
+      mode = IN
+      default = 25000
+    }
+
+  >
+  language = plpgsql
+  owner = postgres
+}
+

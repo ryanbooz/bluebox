@@ -1,0 +1,34 @@
+procedure "bluebox"."insert_payments(date)" {
+  text = """
+	
+ DECLARE
+ 	rental_rate float4 = 1.99;
+ BEGIN 
+	WITH payment_info AS (
+		SELECT r.rental_id, rental_period, GREATEST(CEILING(EXTRACT(epoch from (upper(rental_period)-lower(rental_period)))/3600/24),1) rental_days,
+			inventory_id, r.customer_id, upper(rental_period) AS payment_date
+		FROM bluebox.rental r
+			INNER JOIN bluebox.inventory i USING(inventory_id)
+			INNER JOIN bluebox.film f USING(film_id)
+			LEFT JOIN bluebox.payment p ON r.rental_id = p.rental_id
+		WHERE lower(rental_period) >= rd AND lower(rental_period) <= rd+'5 days'::INTERVAL
+		AND p.rental_id IS NULL 
+	)
+	INSERT INTO bluebox.payment (customer_id, rental_id, amount, payment_date)
+	SELECT customer_id, rental_id, rental_days*rental_rate AS amount, payment_date
+		FROM payment_info;
+	
+	END;
+"""
+  arguments = <
+    {
+      name = rd
+      type = date
+      mode = IN
+    }
+
+  >
+  language = plpgsql
+  owner = postgres
+}
+

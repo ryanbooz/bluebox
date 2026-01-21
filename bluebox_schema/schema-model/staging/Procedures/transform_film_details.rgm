@@ -1,0 +1,35 @@
+procedure "staging"."transform_film_details()" {
+  text = """
+	
+ BEGIN 
+
+	-- Every so often, after processing films, it didn't have
+	-- all of the info necessary to move forward
+	DELETE FROM staging.FILM_DETAIL FD 
+	USING staging.film_detail fd2
+	LEFT JOIN bluebox.film f USING (film_id)
+	WHERE fd.film_id = fd2.film_id AND f.film_id IS NULL;
+
+	WITH production_companies AS (
+		SELECT DISTINCT film_id, (x->>'id')::int id, x->>'name' "name" FROM staging.film_detail, jsonb_array_elements(production_companies) x
+		WHERE processed IS FALSE 
+			--AND film_id NOT IN (SELECT DISTINCT film_id FROM film)
+			AND film_id NOT IN (SELECT DISTINCT film_id FROM film_production_company)
+	),
+	save_production_company AS (
+		INSERT INTO bluebox.production_company
+		SELECT DISTINCT id, "name" FROM production_companies
+		ON CONFLICT (production_company_id) DO NOTHING
+	)
+	INSERT INTO bluebox.film_production_company
+	SELECT DISTINCT film_id, id FROM production_companies
+	ON CONFLICT ON CONSTRAINT film_production_company_pk DO NOTHING;
+	
+	END;
+"""
+  arguments = [
+  ]
+  language = plpgsql
+  owner = postgres
+}
+

@@ -1,0 +1,96 @@
+table "bluebox"."film" {
+  primaryKey = {
+    columns = [
+      "film_id"
+    ]
+    name = "film_pkey"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "film_id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "title" {
+      type = text
+      null = NOT NULL
+    }
+    column "overview" {
+      type = text
+      null = NOT NULL
+    }
+    column "release_date" {
+      type = date
+    }
+    column "genre_ids" {
+      type = integer[]
+    }
+    column "original_language" {
+      type = text
+    }
+    column "rating" {
+      type = public.mpaa_rating
+    }
+    column "popularity" {
+      type = real
+    }
+    column "vote_count" {
+      type = integer
+    }
+    column "vote_average" {
+      type = real
+    }
+    column "budget" {
+      type = bigint
+    }
+    column "revenue" {
+      type = bigint
+    }
+    column "runtime" {
+      type = integer
+    }
+    column "fulltext" {
+      type = tsvector
+      generatedAs = to_tsvector('english'::regconfig, ((COALESCE(title, ''::text) || ' '::text) || COALESCE(overview, ''::text)))
+    }
+  )
+}
+
+index "bluebox"."film_film_genre_ids_idx" {
+  table = "bluebox"."film"
+  type = gin
+  columns = <
+    {
+      definition = genre_ids
+    }
+
+  >
+  isUnique = False
+}
+
+index "bluebox"."film_fulltext_idx" {
+  table = "bluebox"."film"
+  type = gin
+  columns = <
+    {
+      definition = fulltext
+    }
+
+  >
+  isUnique = False
+}
+
+index "bluebox"."idx_title_trgm" {
+  table = "bluebox"."film"
+  type = gin
+  columns = <
+    {
+      definition = title
+      operatorClass = public.gin_trgm_ops
+    }
+
+  >
+  isUnique = False
+}
+

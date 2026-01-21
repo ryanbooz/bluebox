@@ -1,0 +1,44 @@
+table "bluebox"."film_production_company" {
+  primaryKey = {
+    columns = [
+      "film_id"
+      "production_company_id"
+    ]
+    name = "film_production_company_pk"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "film_id" {
+      type = bigint
+      null = NOT NULL
+    }
+    column "production_company_id" {
+      type = bigint
+      null = NOT NULL
+    }
+  )
+}
+
+foreignKey "bluebox"."film_production_company"."film_production_company_film_id_fkey" {
+  columns = [
+    "film_id"
+  ]
+  referencedTable = "bluebox"."film"
+  referencedColumns = [
+    "film_id"
+  ]
+  onDelete = CASCADE
+}
+
+foreignKey "bluebox"."film_production_company"."film_production_company_production_company_id_fkey" {
+  columns = [
+    "production_company_id"
+  ]
+  referencedTable = "bluebox"."production_company"
+  referencedColumns = [
+    "production_company_id"
+  ]
+  onDelete = RESTRICT
+}
+

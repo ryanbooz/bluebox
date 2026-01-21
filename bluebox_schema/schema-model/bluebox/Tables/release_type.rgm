@@ -1,0 +1,21 @@
+table "bluebox"."release_type" {
+  primaryKey = {
+    columns = [
+      "release_type_id"
+    ]
+    name = "release_type_pkey"
+    objectType = primaryKey
+  }
+  owner = postgres
+  columns = (
+    column "release_type_id" {
+      type = integer
+      null = NOT NULL
+    }
+    column "release_type" {
+      type = text
+      null = NOT NULL
+    }
+  )
+}
+

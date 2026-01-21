@@ -1,0 +1,21 @@
+procedure "bluebox"."update_movie_rating()" {
+  text = """
+
+BEGIN 
+	UPDATE bluebox.film SET rating = y.mpaa::mpaa_rating
+	FROM (
+		SELECT film_id, trim(x->>'certification') mpaa, x->>'type' type FROM staging.release_date rd, jsonb_array_elements(releases) x
+		WHERE x->>'iso_3166_1' = 'US'
+		--AND (x->>'type')::int = 3
+		AND (x->>'certification') != ''
+		AND film_id IN (SELECT film_id FROM film WHERE rating IS NULL)	
+		) y 
+	WHERE film.film_id = y.film_id;
+END;
+"""
+  arguments = [
+  ]
+  language = plpgsql
+  owner = postgres
+}
+

@@ -446,7 +446,7 @@ CREATE PROCEDURE bluebox.generate_rental_history(IN data_start timestamp with ti
 
 	rental_start = data_start;
 
-	WHILE rental_start <= data_end THEN
+	WHILE rental_start <= data_end
 	LOOP -- daily LOOP FOR rentals
 	
 		-- this is used during the INSERT and pulled out here for visibility

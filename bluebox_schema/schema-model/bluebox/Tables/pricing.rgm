@@ -1,0 +1,51 @@
+table "bluebox"."pricing" {
+  primaryKey = {
+    columns = [
+      "pricing_key"
+    ]
+    name = "pricing_pkey"
+    objectType = primaryKey
+  }
+  dataFilename = pricing-data.json
+  columns = (
+    column "pricing_key" {
+      type = text
+      null = NOT NULL
+    }
+    column "pricing_value" {
+      type = numeric(10,2)
+      null = NOT NULL
+    }
+    column "description" {
+      type = text
+    }
+    column "effective_date" {
+      type = date
+      null = NOT NULL
+      default = CURRENT_DATE
+    }
+    column "created_at" {
+      type = timestamp with time zone
+      null = NOT NULL
+      default = now()
+    }
+    column "updated_at" {
+      type = timestamp with time zone
+      null = NOT NULL
+      default = now()
+    }
+  )
+}
+
+index "bluebox"."idx_pricing_key" {
+  table = "bluebox"."pricing"
+  type = btree
+  columns = <
+    {
+      definition = pricing_key
+    }
+
+  >
+  isUnique = False
+}
+

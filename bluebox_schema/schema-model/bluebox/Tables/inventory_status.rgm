@@ -1,0 +1,41 @@
+table "bluebox"."inventory_status" {
+  primaryKey = {
+    columns = [
+      "status_id"
+    ]
+    name = "inventory_status_pkey"
+    objectType = primaryKey
+  }
+  dataFilename = inventory_status-data.json
+  columns = (
+    column "status_id" {
+      type = integer
+      null = NOT NULL
+      generatedAsIdentity = BY DEFAULT
+    }
+    column "status_code" {
+      type = text
+      null = NOT NULL
+    }
+    column "description" {
+      type = text
+    }
+    column "display_order" {
+      type = integer
+    }
+  )
+}
+
+index "bluebox"."inventory_status_status_code_key" {
+  table = "bluebox"."inventory_status"
+  type = btree
+  columns = <
+    {
+      definition = status_code
+    }
+
+  >
+  isUnique = True
+  isConstraint = true
+}
+

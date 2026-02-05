@@ -1,0 +1,10 @@
+{
+  "columns": ["pricing_key","pricing_value","description","effective_date","created_at","updated_at"]
+  ,"rows": [
+    ["'daily_rental_rate'","'1.99'","'Standard per-day rental charge'","'2026-02-03'","'2026-02-03 22:59:12.14719+00'","'2026-02-03 22:59:12.14719+00'"]
+    ,["'replacement_cost_catalog'","'14.99'","'Replacement cost for films 3-10 years old'","'2026-02-03'","'2026-02-03 22:59:12.14719+00'","'2026-02-03 22:59:12.14719+00'"]
+    ,["'replacement_cost_classic'","'9.99'","'Replacement cost for films 10+ years old'","'2026-02-03'","'2026-02-03 22:59:12.14719+00'","'2026-02-03 22:59:12.14719+00'"]
+    ,["'replacement_cost_new'","'24.99'","'Replacement cost for films < 1 year old'","'2026-02-03'","'2026-02-03 22:59:12.14719+00'","'2026-02-03 22:59:12.14719+00'"]
+    ,["'replacement_cost_recent'","'19.99'","'Replacement cost for films 1-3 years old'","'2026-02-03'","'2026-02-03 22:59:12.14719+00'","'2026-02-03 22:59:12.14719+00'"]
+  ]
+}

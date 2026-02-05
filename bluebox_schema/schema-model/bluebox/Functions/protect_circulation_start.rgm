@@ -1,0 +1,18 @@
+function "bluebox"."protect_circulation_start()" {
+  text = """
+
+BEGIN
+    IF OLD.circulation_start IS DISTINCT FROM NEW.circulation_start THEN
+        RAISE WARNING 'circulation_start is immutable and cannot be changed (inventory_id: %). Keeping original value: %', 
+            OLD.inventory_id, OLD.circulation_start;
+        NEW.circulation_start := OLD.circulation_start;
+    END IF;
+    RETURN NEW;
+END;
+"""
+  returnType = trigger
+  arguments = [
+  ]
+  language = plpgsql
+}
+

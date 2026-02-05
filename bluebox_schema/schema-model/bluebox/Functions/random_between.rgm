@@ -1,13 +1,13 @@
-function "public"."random_between(numeric, numeric, integer)" {
+function "bluebox"."random_between(numeric, numeric, integer)" {
   text = """
 
- DECLARE
- 	value NUMERIC = random()* (min_val - max_val) + max_val;
+DECLARE
+    value NUMERIC = random() * (max_val - min_val) + min_val;
 BEGIN
    IF round_to = 0 THEN 
-	 RETURN floor(value);
+       RETURN floor(value);
    ELSE 
-   	 RETURN round(value,round_to);
+       RETURN round(value, round_to);
    END IF;
 END
 """
@@ -34,6 +34,5 @@ END
 
   >
   language = plpgsql
-  owner = postgres
 }
 

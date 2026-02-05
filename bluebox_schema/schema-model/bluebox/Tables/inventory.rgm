@@ -26,6 +26,16 @@ table "bluebox"."inventory" {
       null = NOT NULL
       default = now()
     }
+    column "circulation_start" {
+      type = timestamp with time zone
+      null = NOT NULL
+      default = now()
+    }
+    column "status_id" {
+      type = integer
+      null = NOT NULL
+      default = 1
+    }
   )
 }
 
@@ -38,6 +48,16 @@ foreignKey "bluebox"."inventory"."inventory_film_id_fkey" {
     "film_id"
   ]
   onDelete = RESTRICT
+}
+
+foreignKey "bluebox"."inventory"."inventory_status_id_fkey" {
+  columns = [
+    "status_id"
+  ]
+  referencedTable = "bluebox"."inventory_status"
+  referencedColumns = [
+    "status_id"
+  ]
 }
 
 foreignKey "bluebox"."inventory"."inventory_store_id_fkkey" {
@@ -73,5 +93,18 @@ index "bluebox"."inventory_store_id_idx" {
 
   >
   isUnique = False
+}
+
+trigger "bluebox"."inventory"."inventory_protect_circulation_start" {
+  timing = BEFORE
+  events = [
+    UPDATE
+  ]
+  level = ROW
+  function = bluebox.protect_circulation_start
+  functionArguments = [
+  ]
+  table = "bluebox"."inventory"
+  constraint = False
 }
 

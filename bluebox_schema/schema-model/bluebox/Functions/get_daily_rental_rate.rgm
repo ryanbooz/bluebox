@@ -1,0 +1,19 @@
+function "bluebox"."get_daily_rental_rate(bigint)" {
+  text = """
+
+    SELECT bluebox.get_pricing('daily_rental_rate');
+"""
+  returnType = numeric
+  arguments = <
+    {
+      name = p_film_id
+      type = bigint
+      mode = IN
+      default = NULL::bigint
+    }
+
+  >
+  language = sql
+  volatility = STABLE
+}
+

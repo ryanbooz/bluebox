@@ -1,0 +1,184 @@
+procedure "bluebox"."complete_rentals(interval, numeric, numeric, integer, interval, interval, boolean)" {
+  text = """
+
+DECLARE
+    v_eligible_count int;
+    v_skip_count int;
+    v_target_count int;
+    v_completed_count int;
+    v_payments_created int;
+BEGIN
+    -- Count eligible rentals (open and old enough)
+    SELECT count(*) INTO v_eligible_count
+    FROM bluebox.rental
+    WHERE upper(rental_period) IS NULL
+      AND lower(rental_period) < now() - p_min_rental_age;
+    
+    IF v_eligible_count = 0 THEN
+        IF p_print_debug THEN
+            RAISE NOTICE 'No eligible rentals to complete';
+        END IF;
+        RETURN;
+    END IF;
+    
+    -- Calculate how many to skip (future lost items) and how many to complete
+    v_skip_count := GREATEST(0, (v_eligible_count * p_skip_pct / 100)::int);
+    v_target_count := GREATEST(1, (v_eligible_count * p_completion_pct / 100)::int);
+    
+    IF p_print_debug THEN
+        RAISE NOTICE 'Eligible rentals: %, Skipping: % (%.2f%%), Target to complete: % (%.1f%%)', 
+            v_eligible_count, v_skip_count, p_skip_pct, v_target_count, p_completion_pct;
+    END IF;
+
+    -- Complete rentals and move inventory in a single CTE chain
+    WITH eligible_rentals AS MATERIALIZED (
+        SELECT 
+            r.rental_id,
+            r.customer_id,
+            r.inventory_id,
+            r.store_id as rental_store_id,
+            r.rental_period,
+            lower(r.rental_period) as rental_start,
+            row_number() OVER (ORDER BY random()) as rn
+        FROM bluebox.rental r
+        WHERE upper(r.rental_period) IS NULL
+          AND lower(r.rental_period) < now() - p_min_rental_age
+    ),
+    
+    sampled_rentals AS MATERIALIZED (
+        SELECT rental_id, customer_id, inventory_id, rental_store_id, rental_period, rental_start
+        FROM eligible_rentals
+        WHERE rn > v_skip_count
+          AND rn <= v_skip_count + v_target_count
+    ),
+    
+    rentals_with_return_store AS MATERIALIZED (
+        SELECT 
+            sr.*,
+            COALESCE(return_store.store_id, sr.rental_store_id) as return_store_id,
+            GREATEST(
+                now(),
+                sr.rental_start + p_min_duration + 
+                    (random() * EXTRACT(EPOCH FROM (p_max_duration - p_min_duration))) * interval '1 second'
+            ) as return_time
+        FROM sampled_rentals sr
+        LEFT JOIN LATERAL (
+            SELECT s.store_id
+            FROM bluebox.store s
+            JOIN bluebox.customer c ON c.customer_id = sr.customer_id
+            WHERE ST_DWithin(s.geog, c.geog, p_store_distance)
+            ORDER BY random()
+            LIMIT 1
+        ) return_store ON true
+    ),
+    
+    completed_rentals AS (
+        UPDATE bluebox.rental r
+        SET rental_period = tstzrange(lower(r.rental_period), rwr.return_time)
+        FROM rentals_with_return_store rwr
+        WHERE r.rental_id = rwr.rental_id
+        RETURNING r.rental_id, r.customer_id, r.inventory_id, 
+                  rwr.return_store_id, rwr.return_time
+    ),
+    
+    inventory_moves AS (
+        UPDATE bluebox.inventory i
+        SET store_id = cr.return_store_id,
+            last_update = now()
+        FROM completed_rentals cr
+        WHERE i.inventory_id = cr.inventory_id
+          AND i.store_id != cr.return_store_id
+        RETURNING i.inventory_id
+    ),
+    
+    payment_info AS (
+        SELECT 
+            cr.rental_id,
+            cr.customer_id,
+            cr.return_time as payment_date,
+            GREATEST(1, 
+                CEILING(EXTRACT(EPOCH FROM (cr.return_time - lower(r.rental_period))) / 86400)
+            ) as rental_days,
+            i.film_id
+        FROM completed_rentals cr
+        JOIN bluebox.rental r ON r.rental_id = cr.rental_id
+        JOIN bluebox.inventory i ON i.inventory_id = cr.inventory_id
+    ),
+    
+    created_payments AS (
+        INSERT INTO bluebox.payment (customer_id, rental_id, amount, payment_date)
+        SELECT 
+            customer_id,
+            rental_id,
+            rental_days * bluebox.get_daily_rental_rate(film_id) AS amount,
+            payment_date
+        FROM payment_info
+        RETURNING payment_id
+    )
+    
+    SELECT 
+        (SELECT count(*) FROM completed_rentals),
+        (SELECT count(*) FROM created_payments)
+    INTO v_completed_count, v_payments_created;
+    
+    IF p_print_debug THEN
+        RAISE NOTICE 'Completed % rentals, created % payments', v_completed_count, v_payments_created;
+    END IF;
+    
+    COMMIT;
+END;
+"""
+  arguments = <
+    {
+      name = p_min_rental_age
+      type = interval
+      mode = IN
+      default = '16:00:00'::interval
+    }
+
+    {
+      name = p_completion_pct
+      type = numeric
+      mode = IN
+      default = 15.0
+    }
+
+    {
+      name = p_skip_pct
+      type = numeric
+      mode = IN
+      default = 0.1
+    }
+
+    {
+      name = p_store_distance
+      type = integer
+      mode = IN
+      default = 25000
+    }
+
+    {
+      name = p_min_duration
+      type = interval
+      mode = IN
+      default = '16:00:00'::interval
+    }
+
+    {
+      name = p_max_duration
+      type = interval
+      mode = IN
+      default = '96:00:00'::interval
+    }
+
+    {
+      name = p_print_debug
+      type = boolean
+      mode = IN
+      default = false
+    }
+
+  >
+  language = plpgsql
+}
+

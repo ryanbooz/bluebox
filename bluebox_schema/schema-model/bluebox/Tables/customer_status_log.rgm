@@ -1,0 +1,95 @@
+table "bluebox"."customer_status_log" {
+  primaryKey = {
+    columns = [
+      "log_id"
+    ]
+    name = "customer_status_log_pkey"
+    objectType = primaryKey
+  }
+  columns = (
+    column "log_id" {
+      type = bigint
+      null = NOT NULL
+      generatedAsIdentity = ALWAYS
+    }
+    column "customer_id" {
+      type = integer
+      null = NOT NULL
+    }
+    column "status_date" {
+      type = timestamp with time zone
+      null = NOT NULL
+      default = now()
+    }
+    column "status" {
+      type = text
+      null = NOT NULL
+    }
+    column "reason_code" {
+      type = text
+      null = NOT NULL
+    }
+    column "notes" {
+      type = text
+    }
+    column "rental_id" {
+      type = bigint
+    }
+  )
+}
+
+foreignKey "bluebox"."customer_status_log"."customer_status_log_customer_id_fkey" {
+  columns = [
+    "customer_id"
+  ]
+  referencedTable = "bluebox"."customer"
+  referencedColumns = [
+    "customer_id"
+  ]
+}
+
+index "bluebox"."idx_csl_customer" {
+  table = "bluebox"."customer_status_log"
+  type = btree
+  columns = <
+    {
+      definition = customer_id
+    }
+
+    {
+      definition = status_date
+      sortOrder = DESC
+    }
+
+  >
+  isUnique = False
+}
+
+index "bluebox"."idx_csl_date" {
+  table = "bluebox"."customer_status_log"
+  type = btree
+  columns = <
+    {
+      definition = status_date
+    }
+
+  >
+  isUnique = False
+}
+
+index "bluebox"."idx_csl_status" {
+  table = "bluebox"."customer_status_log"
+  type = btree
+  columns = <
+    {
+      definition = status
+    }
+
+    {
+      definition = status_date
+    }
+
+  >
+  isUnique = False
+}
+

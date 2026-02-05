@@ -1,0 +1,26 @@
+function "bluebox"."inventory_held_by_customer(integer)" {
+  text = """-
+
+DECLARE
+    v_customer_id INTEGER;
+BEGIN
+    SELECT customer_id INTO v_customer_id
+    FROM bluebox.rental
+    WHERE inventory_id = p_inventory_id
+      AND (upper(rental_period) IS NULL OR rental_period @> now());
+
+    RETURN v_customer_id;
+END 
+"""
+  returnType = integer
+  arguments = <
+    {
+      name = p_inventory_id
+      type = integer
+      mode = IN
+    }
+
+  >
+  language = plpgsql
+}
+

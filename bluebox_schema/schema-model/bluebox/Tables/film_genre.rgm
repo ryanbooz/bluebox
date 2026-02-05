@@ -6,6 +6,7 @@ table "bluebox"."film_genre" {
     name = "genre_pkey"
     objectType = primaryKey
   }
+  dataFilename = film_genre-data.json
   owner = postgres
   columns = (
     column "genre_id" {

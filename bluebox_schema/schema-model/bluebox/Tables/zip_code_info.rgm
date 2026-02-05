@@ -6,6 +6,7 @@ table "bluebox"."zip_code_info" {
     name = "zip_code_info_pk"
     objectType = primaryKey
   }
+  dataFilename = zip_code_info-data.json
   owner = postgres
   columns = (
     column "zip_code" {

@@ -5,14 +5,14 @@ DO LANGUAGE plpgsql $$BEGIN RAISE NOTICE 'Creating bluebox schema...';END$$;
 -- We don't use IF NOT EXISTS for security reasons. We expect that a new, empty
 -- database does not have this schema. If it does, then someone might have created
 -- it ahead of time in anticipation of objects being created
-CREATE SCHEMA bluebox;
+CREATE SCHEMA IF NOT EXISTS bluebox;
 
 
 DO LANGUAGE plpgsql $$BEGIN RAISE NOTICE 'Creating staging schema...';END$$;
 -- We don't use IF NOT EXISTS for security reasons. We expect that a new, empty
 -- database does not have this schema. If it does, then someone might have created
 -- it ahead of time in anticipation of objects being created
-CREATE SCHEMA staging;
+CREATE SCHEMA IF NOT EXISTS staging;
 
 
 DO LANGUAGE plpgsql $$BEGIN RAISE NOTICE 'Creating postgis...';END$$;

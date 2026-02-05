@@ -1,0 +1,199 @@
+procedure "bluebox"."process_lost_rentals(interval, boolean, boolean)" {
+  text = """
+
+DECLARE
+    v_lost_count int;
+    v_payments_created int;
+    v_suspended_count int;
+BEGIN
+    WITH lost_rentals AS MATERIALIZED (
+        SELECT 
+            r.rental_id,
+            r.customer_id,
+            r.inventory_id,
+            r.store_id,
+            lower(r.rental_period) as rental_start,
+            now() as loss_date
+        FROM bluebox.rental r
+        WHERE upper(r.rental_period) IS NULL
+          AND lower(r.rental_period) < now() - p_lost_after
+    ),
+    
+    closed_rentals AS (
+        UPDATE bluebox.rental r
+        SET rental_period = tstzrange(lower(r.rental_period), lr.loss_date)
+        FROM lost_rentals lr
+        WHERE r.rental_id = lr.rental_id
+        RETURNING r.rental_id, r.inventory_id, r.customer_id, lr.loss_date
+    ),
+    
+    lost_inventory AS (
+        UPDATE bluebox.inventory i
+        SET status_id = 2,  -- 'lost'
+            last_update = now()
+        FROM closed_rentals cr
+        WHERE i.inventory_id = cr.inventory_id
+        RETURNING i.inventory_id, i.film_id
+    ),
+    
+    payment_info AS (
+        SELECT 
+            cr.rental_id,
+            cr.customer_id,
+            cr.loss_date as payment_date,
+            bluebox.get_replacement_cost(li.film_id) as amount
+        FROM closed_rentals cr
+        JOIN lost_inventory li ON li.inventory_id = cr.inventory_id
+    ),
+    
+    created_payments AS (
+        INSERT INTO bluebox.payment (customer_id, rental_id, amount, payment_date)
+        SELECT customer_id, rental_id, amount, payment_date
+        FROM payment_info
+        RETURNING payment_id, rental_id, customer_id
+    ),
+    
+    -- Suspend customers who lost items
+    suspend_customers AS (
+        UPDATE bluebox.customer c
+        SET activebool = FALSE, last_update = now()
+        FROM created_payments cp
+        WHERE c.customer_id = cp.customer_id
+          AND p_suspend_customer
+        RETURNING c.customer_id, cp.rental_id
+    ),
+    
+    -- Log the suspensions
+    log_suspensions AS (
+        INSERT INTO bluebox.customer_status_log (customer_id, status, reason_code, rental_id, notes)
+        SELECT customer_id, 'suspended', 'lost_item', rental_id, 'Item not returned, charged replacement cost'
+        FROM suspend_customers
+        RETURNING log_id
+    )
+    
+    SELECT 
+        (SELECT count(*) FROM closed_rentals),
+        (SELECT count(*) FROM created_payments),
+        (SELECT count(*) FROM log_suspensions)
+    INTO v_lost_count, v_payments_created, v_suspended_count;
+    
+    IF p_print_debug THEN
+        RAISE NOTICE 'Marked % rentals as lost, created % payments, suspended % customers', 
+            v_lost_count, v_payments_created, v_suspended_count;
+    END IF;
+    
+    COMMIT;
+END;
+"""
+  arguments = <
+    {
+      name = p_lost_after
+      type = interval
+      mode = IN
+      default = '30 days'::interval
+    }
+
+    {
+      name = p_suspend_customer
+      type = boolean
+      mode = IN
+      default = true
+    }
+
+    {
+      name = p_print_debug
+      type = boolean
+      mode = IN
+      default = false
+    }
+
+  >
+  language = plpgsql
+}
+
+procedure "bluebox"."process_lost_rentals(interval, boolean)" {
+  text = """
+
+DECLARE
+    v_lost_count int;
+    v_payments_created int;
+BEGIN
+    WITH lost_rentals AS MATERIALIZED (
+        SELECT 
+            r.rental_id,
+            r.customer_id,
+            r.inventory_id,
+            r.store_id,
+            lower(r.rental_period) as rental_start,
+            now() as loss_date
+        FROM bluebox.rental r
+        WHERE upper(r.rental_period) IS NULL
+          AND lower(r.rental_period) < now() - p_lost_after
+    ),
+    
+    closed_rentals AS (
+        UPDATE bluebox.rental r
+        SET rental_period = tstzrange(lower(r.rental_period), lr.loss_date)
+        FROM lost_rentals lr
+        WHERE r.rental_id = lr.rental_id
+        RETURNING r.rental_id, r.inventory_id, r.customer_id, lr.loss_date
+    ),
+    
+    lost_inventory AS (
+        UPDATE bluebox.inventory i
+        SET status_id = 2,  -- 'lost'
+            last_update = now()
+        FROM closed_rentals cr
+        WHERE i.inventory_id = cr.inventory_id
+        RETURNING i.inventory_id, i.film_id
+    ),
+    
+    payment_info AS (
+        SELECT 
+            cr.rental_id,
+            cr.customer_id,
+            cr.loss_date as payment_date,
+            bluebox.get_replacement_cost(li.film_id) as amount
+        FROM closed_rentals cr
+        JOIN lost_inventory li ON li.inventory_id = cr.inventory_id
+    ),
+    
+    created_payments AS (
+        INSERT INTO bluebox.payment (customer_id, rental_id, amount, payment_date)
+        SELECT customer_id, rental_id, amount, payment_date
+        FROM payment_info
+        RETURNING payment_id
+    )
+    
+    SELECT 
+        (SELECT count(*) FROM closed_rentals),
+        (SELECT count(*) FROM created_payments)
+    INTO v_lost_count, v_payments_created;
+    
+    IF p_print_debug THEN
+        RAISE NOTICE 'Marked % rentals as lost, created % payments (replacement cost)', 
+            v_lost_count, v_payments_created;
+    END IF;
+    
+    COMMIT;
+END;
+"""
+  arguments = <
+    {
+      name = p_lost_after
+      type = interval
+      mode = IN
+      default = '30 days'::interval
+    }
+
+    {
+      name = p_print_debug
+      type = boolean
+      mode = IN
+      default = false
+    }
+
+  >
+  language = plpgsql
+}
+

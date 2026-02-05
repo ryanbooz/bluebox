@@ -1,0 +1,49 @@
+function "bluebox"."get_replacement_cost(bigint)" {
+  text = """
+
+    SELECT CASE
+        WHEN f.release_date > CURRENT_DATE - INTERVAL '1 year' 
+            THEN bluebox.get_pricing('replacement_cost_new')
+        WHEN f.release_date > CURRENT_DATE - INTERVAL '3 years' 
+            THEN bluebox.get_pricing('replacement_cost_recent')
+        WHEN f.release_date > CURRENT_DATE - INTERVAL '10 years' 
+            THEN bluebox.get_pricing('replacement_cost_catalog')
+        ELSE 
+            bluebox.get_pricing('replacement_cost_classic')
+    END
+    FROM bluebox.film f
+    WHERE f.film_id = p_film_id;
+"""
+  returnType = numeric
+  arguments = <
+    {
+      name = p_film_id
+      type = bigint
+      mode = IN
+    }
+
+  >
+  language = sql
+  volatility = STABLE
+}
+
+function "bluebox"."get_replacement_cost(integer)" {
+  text = """
+
+    SELECT bluebox.get_replacement_cost(i.film_id)
+    FROM bluebox.inventory i
+    WHERE i.inventory_id = p_inventory_id;
+"""
+  returnType = numeric
+  arguments = <
+    {
+      name = p_inventory_id
+      type = integer
+      mode = IN
+    }
+
+  >
+  language = sql
+  volatility = STABLE
+}
+

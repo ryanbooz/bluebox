@@ -1,0 +1,60 @@
+function "bluebox"."log_customer_status(integer, text, text, text, bigint, timestamp with time zone)" {
+  text = """
+
+DECLARE
+    v_log_id bigint;
+BEGIN
+    INSERT INTO bluebox.customer_status_log 
+        (customer_id, status_date, status, reason_code, notes, rental_id)
+    VALUES 
+        (p_customer_id, p_status_date, p_status, p_reason_code, p_notes, p_rental_id)
+    RETURNING log_id INTO v_log_id;
+    
+    RETURN v_log_id;
+END;
+"""
+  returnType = bigint
+  arguments = <
+    {
+      name = p_customer_id
+      type = integer
+      mode = IN
+    }
+
+    {
+      name = p_status
+      type = text
+      mode = IN
+    }
+
+    {
+      name = p_reason_code
+      type = text
+      mode = IN
+    }
+
+    {
+      name = p_notes
+      type = text
+      mode = IN
+      default = NULL::text
+    }
+
+    {
+      name = p_rental_id
+      type = bigint
+      mode = IN
+      default = NULL::bigint
+    }
+
+    {
+      name = p_status_date
+      type = timestamp with time zone
+      mode = IN
+      default = now()
+    }
+
+  >
+  language = plpgsql
+}
+

@@ -1,0 +1,44 @@
+function "bluebox"."get_customer_balance(integer, timestamp with time zone)" {
+  text = """-
+
+DECLARE
+    v_rental_fees NUMERIC(10,2);  -- total amount owed from rentals
+    v_payments NUMERIC(10,2);     -- total payments made
+BEGIN
+    -- Sum of rental fees (from payment records for rentals starting before effective date)
+    SELECT COALESCE(SUM(p.amount), 0) INTO v_rental_fees
+    FROM bluebox.rental r
+    JOIN bluebox.payment p ON r.rental_id = p.rental_id
+    WHERE r.customer_id = p_customer_id
+      AND lower(r.rental_period) <= p_effective_date;
+
+    -- Sum of payments made before effective date
+    SELECT COALESCE(SUM(amount), 0) INTO v_payments
+    FROM bluebox.payment
+    WHERE customer_id = p_customer_id
+      AND payment_date <= p_effective_date;
+
+    -- In your current model, payment is created when rental ends,
+    -- so balance should typically be 0. But this preserves the 
+    -- "what did they owe as of date X" logic.
+    RETURN v_rental_fees - v_payments;
+END 
+"""
+  returnType = numeric
+  arguments = <
+    {
+      name = p_customer_id
+      type = integer
+      mode = IN
+    }
+
+    {
+      name = p_effective_date
+      type = timestamp with time zone
+      mode = IN
+    }
+
+  >
+  language = plpgsql
+}
+

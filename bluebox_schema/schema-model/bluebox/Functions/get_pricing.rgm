@@ -1,0 +1,20 @@
+function "bluebox"."get_pricing(text)" {
+  text = """
+
+    SELECT pricing_value 
+    FROM bluebox.pricing 
+    WHERE pricing_key = p_key;
+"""
+  returnType = numeric
+  arguments = <
+    {
+      name = p_key
+      type = text
+      mode = IN
+    }
+
+  >
+  language = sql
+  volatility = STABLE
+}
+

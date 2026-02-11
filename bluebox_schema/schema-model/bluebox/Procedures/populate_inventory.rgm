@@ -1,0 +1,117 @@
+procedure "bluebox"."populate_inventory(boolean, boolean)" {
+  text = """
+
+DECLARE
+    v_start_time TIMESTAMPTZ;
+    v_tier_a INT := 0;
+    v_tier_b INT := 0;
+    v_tier_c INT := 0;
+    v_tier_d INT := 0;
+    v_total INT := 0;
+BEGIN
+    v_start_time := clock_timestamp();
+    
+    IF print_debug THEN
+        RAISE NOTICE 'Starting inventory population at %', v_start_time;
+    END IF;
+
+    -- Optionally clear existing inventory
+    IF clear_existing THEN
+        IF print_debug THEN
+            RAISE NOTICE 'Truncating inventory, rental, and payment tables...';
+        END IF;
+        -- TRUNCATE is faster and avoids MVCC bloat
+        -- CASCADE handles FK dependencies automatically
+        TRUNCATE bluebox.inventory RESTART IDENTITY CASCADE;
+        COMMIT;
+    END IF;
+
+    -- Create tiered inventory
+    WITH film_tiers AS (
+        SELECT 
+            film_id,
+            popularity,
+            release_date,
+            vote_average,
+            CASE 
+                WHEN popularity >= 100 OR release_date > now() - interval '1 year' THEN 'A'
+                WHEN popularity >= 30 OR release_date > now() - interval '3 years' THEN 'B'
+                WHEN popularity >= 10 OR vote_average >= 7.0 THEN 'C'
+                ELSE 'D'
+            END as tier
+        FROM bluebox.film
+        WHERE film_id NOT IN (SELECT DISTINCT film_id FROM bluebox.inventory)
+    ),
+    stores_randomized AS (
+        SELECT store_id, random() as rnd
+        FROM bluebox.store
+    ),
+    -- Tier A: All stores, 10-14 copies (new/popular)
+    tier_a_inventory AS (
+        SELECT f.film_id, s.store_id, floor(random() * 5 + 10)::int as copies
+        FROM film_tiers f
+        CROSS JOIN bluebox.store s
+        WHERE f.tier = 'A'
+    ),
+    -- Tier B: ~60% of stores, 5-7 copies (medium popularity)
+    tier_b_inventory AS (
+        SELECT f.film_id, s.store_id, floor(random() * 3 + 5)::int as copies
+        FROM film_tiers f
+        CROSS JOIN stores_randomized s
+        WHERE f.tier = 'B' AND s.rnd < 0.6
+    ),
+    -- Tier C: ~30% of stores, 2-4 copies (decent)
+    tier_c_inventory AS (
+        SELECT f.film_id, s.store_id, floor(random() * 3 + 2)::int as copies
+        FROM film_tiers f
+        CROSS JOIN stores_randomized s
+        WHERE f.tier = 'C' AND s.rnd < 0.3
+    ),
+    -- Tier D: ~10% of stores, 1-2 copies (long tail)
+    tier_d_inventory AS (
+        SELECT f.film_id, s.store_id, floor(random() * 2 + 1)::int as copies
+        FROM film_tiers f
+        CROSS JOIN stores_randomized s
+        WHERE f.tier = 'D' AND s.rnd < 0.1
+    ),
+    all_inventory AS (
+        SELECT * FROM tier_a_inventory UNION ALL
+        SELECT * FROM tier_b_inventory UNION ALL
+        SELECT * FROM tier_c_inventory UNION ALL
+        SELECT * FROM tier_d_inventory
+    )
+    INSERT INTO bluebox.inventory (film_id, store_id, status_id)
+    SELECT film_id, store_id, 1
+    FROM all_inventory, generate_series(1, copies);
+
+    COMMIT;
+
+    -- Get counts for reporting
+    SELECT count(*) INTO v_total FROM bluebox.inventory;
+    
+    IF print_debug THEN
+        RAISE NOTICE 'Inventory population complete in % seconds', 
+            EXTRACT(EPOCH FROM clock_timestamp() - v_start_time)::numeric(10,2);
+        RAISE NOTICE 'Total inventory items: %', v_total;
+    END IF;
+END;
+"""
+  arguments = <
+    {
+      name = clear_existing
+      type = boolean
+      mode = IN
+      default = false
+    }
+
+    {
+      name = print_debug
+      type = boolean
+      mode = IN
+      default = false
+    }
+
+  >
+  language = plpgsql
+}
+

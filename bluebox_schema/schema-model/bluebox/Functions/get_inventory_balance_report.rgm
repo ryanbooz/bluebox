@@ -1,0 +1,50 @@
+function "bluebox"."get_inventory_balance_report()" {
+  text = """
+
+    WITH store_metrics AS (
+        SELECT 
+            s.store_id,
+            count(DISTINCT c.customer_id) as nearby_customers
+        FROM bluebox.store s
+        LEFT JOIN bluebox.customer c ON ST_DWithin(s.geog, c.geog, 25000)
+        GROUP BY s.store_id
+    ),
+    totals AS (
+        SELECT 
+            (SELECT count(*) FROM bluebox.inventory WHERE status_id = 1) as total_inventory,
+            (SELECT count(*) FROM bluebox.store) as store_count,
+            sum(nearby_customers) as total_customers
+        FROM store_metrics
+    ),
+    dynamic_params AS (
+        SELECT 
+            (total_inventory / store_count * 0.4)::int as floor_inventory,
+            total_inventory - (total_inventory / store_count * 0.4)::int * store_count as remainder,
+            total_customers
+        FROM totals
+    ),
+    store_inventory AS (
+        SELECT store_id, count(*) as inv_count
+        FROM bluebox.inventory
+        WHERE status_id = 1
+        GROUP BY store_id
+    )
+    SELECT 
+        sm.store_id,
+        sm.nearby_customers,
+        COALESCE(si.inv_count, 0) as current_inventory,
+        dp.floor_inventory + (sm.nearby_customers::float / dp.total_customers * dp.remainder)::int as target_inventory,
+        COALESCE(si.inv_count, 0) - (dp.floor_inventory + (sm.nearby_customers::float / dp.total_customers * dp.remainder)::int) as variance,
+        ROUND(100.0 * (COALESCE(si.inv_count, 0) - (dp.floor_inventory + (sm.nearby_customers::float / dp.total_customers * dp.remainder)::int)) 
+            / (dp.floor_inventory + (sm.nearby_customers::float / dp.total_customers * dp.remainder)::int), 1) as variance_pct
+    FROM store_metrics sm
+    CROSS JOIN dynamic_params dp
+    LEFT JOIN store_inventory si ON sm.store_id = si.store_id
+    ORDER BY variance DESC;
+"""
+  returnType = TABLE(store_id bigint, nearby_customers bigint, current_inventory bigint, target_inventory integer, variance integer, variance_pct numeric)
+  arguments = [
+  ]
+  language = sql
+}
+

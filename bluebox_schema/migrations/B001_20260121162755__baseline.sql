@@ -16,15 +16,15 @@ CREATE SCHEMA IF NOT EXISTS staging;
 
 
 DO LANGUAGE plpgsql $$BEGIN RAISE NOTICE 'Creating postgis...';END$$;
-CREATE EXTENSION postgis WITH SCHEMA public VERSION '3.6.0';
+CREATE EXTENSION postgis WITH SCHEMA public;
 
 
 DO LANGUAGE plpgsql $$BEGIN RAISE NOTICE 'Creating pg_trgm...';END$$;
-CREATE EXTENSION pg_trgm WITH SCHEMA public VERSION '1.6';
+CREATE EXTENSION pg_trgm WITH SCHEMA public;
 
 
 DO LANGUAGE plpgsql $$BEGIN RAISE NOTICE 'Creating pg_stat_statements...';END$$;
-CREATE EXTENSION pg_stat_statements WITH SCHEMA public VERSION '1.11';
+CREATE EXTENSION pg_stat_statements WITH SCHEMA public;
 
 
 DO LANGUAGE plpgsql $$BEGIN RAISE NOTICE 'Creating staging.release_date...';END$$;

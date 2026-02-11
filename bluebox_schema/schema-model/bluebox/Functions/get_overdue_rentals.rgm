@@ -1,0 +1,33 @@
+function "bluebox"."get_overdue_rentals(integer)" {
+  text = """
+
+    SELECT 
+        r.rental_id,
+        c.customer_id,
+        c.full_name,
+        f.title,
+        lower(r.rental_period),
+        EXTRACT(day FROM now() - lower(r.rental_period))::INTEGER,
+        f.replacement_cost
+    FROM bluebox.rental r
+    JOIN bluebox.customer c ON r.customer_id = c.customer_id
+    JOIN bluebox.inventory i ON r.inventory_id = i.inventory_id
+    JOIN bluebox.film f ON i.film_id = f.film_id
+    WHERE upper(r.rental_period) IS NULL
+      AND lower(r.rental_period) < now() - (overdue_days || ' days')::INTERVAL
+      AND i.status_id = 1  -- only in_circulation items
+    ORDER BY lower(r.rental_period);
+"""
+  returnType = TABLE(rental_id bigint, customer_id bigint, customer_name text, film_title text, rental_start timestamp with time zone, days_overdue integer, replacement_cost numeric)
+  arguments = <
+    {
+      name = overdue_days
+      type = integer
+      mode = IN
+      default = 7
+    }
+
+  >
+  language = sql
+}
+

@@ -1,9 +1,0 @@
-{
-  "columns": ["status_id","status_code","description","display_order"]
-  ,"rows": [
-    ["1","'in_circulation'","'Available for rental'","1"]
-    ,["2","'lost'","'Never returned, customer charged replacement cost'","2"]
-    ,["3","'damaged'","'Returned damaged, removed from circulation'","3"]
-    ,["4","'retired'","'Intentionally removed from inventory'","4"]
-  ]
-}

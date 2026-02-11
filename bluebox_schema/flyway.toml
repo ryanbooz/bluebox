@@ -31,27 +31,7 @@ detectRenames = "identical-only"
 [redgateCompare.postgresql.options.ignores]
 ignoreNewlinesInTextObjects = "off"
 
-  [[redgateCompare.staticDataTables]]
-  schema = "bluebox"
-  table = "film_genre"
-
-  [[redgateCompare.staticDataTables]]
-  schema = "bluebox"
-  table = "inventory_status"
-
-  [[redgateCompare.staticDataTables]]
-  schema = "bluebox"
-  table = "release_type"
-
-  [[redgateCompare.staticDataTables]]
-  schema = "bluebox"
-  table = "zip_code_info"
-
-  [[redgateCompare.staticDataTables]]
-  schema = "bluebox"
-  table = "pricing"
-
 [environments.prod]
-url = "jdbc:postgresql://localhost:5432/bluebox_prod"
+url = "jdbc:postgresql://localhost:5432/bluebox"
 schemas = [ "public", "bluebox", "staging" ]
 displayName = "Bluebox PROD"

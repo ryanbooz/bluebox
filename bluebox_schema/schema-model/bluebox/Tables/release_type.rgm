@@ -6,7 +6,6 @@ table "bluebox"."release_type" {
     name = "release_type_pkey"
     objectType = primaryKey
   }
-  dataFilename = release_type-data.json
   owner = postgres
   columns = (
     column "release_type_id" {

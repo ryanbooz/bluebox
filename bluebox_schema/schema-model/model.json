@@ -1,7 +1,7 @@
 {
   "database-engine": "postgresql",
   "database-properties": {
-    "database-version": "170007",
+    "database-version": "180001",
     "database-flavor": "postgres",
     "model-version": "4.2"
   },

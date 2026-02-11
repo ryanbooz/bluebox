@@ -1,0 +1,37 @@
+function "bluebox"."get_customer_status_summary()" {
+  text = """
+
+    WITH customer_stats AS (
+        SELECT 
+            c.customer_id,
+            c.activebool,
+            COUNT(r.rental_id) as rental_count,
+            COALESCE(SUM(p.amount), 0) as total_spent,
+            MAX(lower(r.rental_period)) as last_rental
+        FROM bluebox.customer c
+        LEFT JOIN bluebox.rental r ON c.customer_id = r.customer_id
+        LEFT JOIN bluebox.payment p ON r.rental_id = p.rental_id
+        GROUP BY c.customer_id, c.activebool
+    )
+    SELECT 
+        CASE 
+            WHEN NOT activebool THEN 'Inactive'
+            WHEN last_rental > now() - interval '30 days' THEN 'Active (30d)'
+            WHEN last_rental > now() - interval '90 days' THEN 'Recent (30-90d)'
+            WHEN last_rental > now() - interval '180 days' THEN 'Dormant (90-180d)'
+            ELSE 'At Risk (>180d)'
+        END as status,
+        COUNT(*),
+        ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2),
+        ROUND(AVG(rental_count), 1),
+        ROUND(AVG(total_spent), 2)
+    FROM customer_stats
+    GROUP BY 1
+    ORDER BY 2 DESC;
+"""
+  returnType = TABLE(status text, customer_count bigint, pct_of_total numeric, avg_lifetime_rentals numeric, avg_lifetime_value numeric)
+  arguments = [
+  ]
+  language = sql
+}
+

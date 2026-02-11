@@ -26,15 +26,15 @@ table "bluebox"."inventory" {
       null = NOT NULL
       default = now()
     }
-    column "circulation_start" {
-      type = timestamp with time zone
-      null = NOT NULL
-      default = now()
-    }
     column "status_id" {
       type = integer
       null = NOT NULL
       default = 1
+    }
+    column "circulation_start" {
+      type = timestamp with time zone
+      null = NOT NULL
+      default = now()
     }
   )
 }

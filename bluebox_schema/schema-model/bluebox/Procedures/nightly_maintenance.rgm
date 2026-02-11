@@ -1,0 +1,105 @@
+procedure "bluebox"."nightly_maintenance(integer, boolean, integer, numeric, boolean)" {
+  text = """
+
+DECLARE
+    v_start_time TIMESTAMPTZ;
+    v_step_time TIMESTAMPTZ;
+BEGIN
+    v_start_time := clock_timestamp();
+    
+    IF print_debug THEN
+        RAISE NOTICE '=== Starting nightly maintenance at % ===', v_start_time;
+    END IF;
+
+    -- Step 1: Process lost inventory
+    v_step_time := clock_timestamp();
+    IF print_debug THEN
+        RAISE NOTICE 'Step 1: Processing lost inventory...';
+    END IF;
+    
+    CALL bluebox.process_lost_inventory(
+        lost_threshold_days := lost_threshold_days,
+        deactivate_customer := deactivate_lost_customers,
+        print_debug := print_debug
+    );
+    
+    IF print_debug THEN
+        RAISE NOTICE 'Step 1 completed in % ms', EXTRACT(MILLISECOND FROM clock_timestamp() - v_step_time);
+    END IF;
+
+    -- Step 2: Update customer activity status
+    v_step_time := clock_timestamp();
+    IF print_debug THEN
+        RAISE NOTICE 'Step 2: Updating customer activity...';
+    END IF;
+    
+    CALL bluebox.update_customer_activity(
+        dormant_days := dormant_days,
+        reactivate_pct := reactivate_pct,
+        print_debug := print_debug
+    );
+    
+    IF print_debug THEN
+        RAISE NOTICE 'Step 2 completed in % ms', EXTRACT(MILLISECOND FROM clock_timestamp() - v_step_time);
+    END IF;
+
+    -- Step 3: Analyze tables that were modified
+    v_step_time := clock_timestamp();
+    IF print_debug THEN
+        RAISE NOTICE 'Step 3: Analyzing modified tables...';
+    END IF;
+    
+    ANALYZE bluebox.inventory;
+    ANALYZE bluebox.customer;
+    ANALYZE bluebox.rental;
+    ANALYZE bluebox.payment;
+    
+    IF print_debug THEN
+        RAISE NOTICE 'Step 3 completed in % ms', EXTRACT(MILLISECOND FROM clock_timestamp() - v_step_time);
+        RAISE NOTICE '=== Nightly maintenance completed in % ms ===', 
+            EXTRACT(MILLISECOND FROM clock_timestamp() - v_start_time);
+    END IF;
+
+    COMMIT;
+END;
+"""
+  arguments = <
+    {
+      name = lost_threshold_days
+      type = integer
+      mode = IN
+      default = 30
+    }
+
+    {
+      name = deactivate_lost_customers
+      type = boolean
+      mode = IN
+      default = true
+    }
+
+    {
+      name = dormant_days
+      type = integer
+      mode = IN
+      default = 180
+    }
+
+    {
+      name = reactivate_pct
+      type = numeric
+      mode = IN
+      default = 0.5
+    }
+
+    {
+      name = print_debug
+      type = boolean
+      mode = IN
+      default = false
+    }
+
+  >
+  language = plpgsql
+}
+

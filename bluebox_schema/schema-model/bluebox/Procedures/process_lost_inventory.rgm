@@ -1,0 +1,105 @@
+procedure "bluebox"."process_lost_inventory(integer, boolean, boolean)" {
+  text = """
+
+DECLARE
+    v_lost_count INT;
+    v_total_charges NUMERIC(10,2);
+    v_lost_status_id INT;
+BEGIN
+    -- Get the status_id for 'lost'
+    SELECT status_id INTO v_lost_status_id 
+    FROM bluebox.inventory_status 
+    WHERE status_code = 'lost';
+
+    -- Find overdue rentals and process them
+    WITH overdue_rentals AS (
+        SELECT 
+            r.rental_id,
+            r.customer_id,
+            r.inventory_id,
+            lower(r.rental_period) as rental_start,
+            f.replacement_cost,
+            f.title
+        FROM bluebox.rental r
+        JOIN bluebox.inventory i ON r.inventory_id = i.inventory_id
+        JOIN bluebox.film f ON i.film_id = f.film_id
+        WHERE upper(r.rental_period) IS NULL
+          AND lower(r.rental_period) < now() - (lost_threshold_days || ' days')::INTERVAL
+          AND i.status_id = 1  -- only in_circulation items
+    ),
+    -- Mark inventory as lost
+    mark_lost AS (
+        UPDATE bluebox.inventory i
+        SET status_id = v_lost_status_id, last_update = now()
+        FROM overdue_rentals o
+        WHERE i.inventory_id = o.inventory_id
+        RETURNING i.inventory_id
+    ),
+    -- Close the rental
+    close_rental AS (
+        UPDATE bluebox.rental r
+        SET rental_period = tstzrange(lower(rental_period), now()),
+            last_update = now()
+        FROM overdue_rentals o
+        WHERE r.rental_id = o.rental_id
+        RETURNING r.rental_id, r.customer_id
+    ),
+    -- Charge replacement cost
+    charge_customer AS (
+        INSERT INTO bluebox.payment (customer_id, rental_id, amount, payment_date)
+        SELECT 
+            o.customer_id,
+            o.rental_id,
+            COALESCE(o.replacement_cost, 19.99),
+            now()
+        FROM overdue_rentals o
+        RETURNING amount
+    ),
+    -- Optionally deactivate customer
+    deactivate AS (
+        UPDATE bluebox.customer c
+        SET activebool = FALSE, last_update = now()
+        FROM overdue_rentals o
+        WHERE c.customer_id = o.customer_id
+          AND deactivate_customer = TRUE
+        RETURNING c.customer_id
+    )
+    SELECT count(*), COALESCE(sum(amount), 0)
+    INTO v_lost_count, v_total_charges
+    FROM charge_customer;
+
+    IF print_debug THEN
+        RAISE NOTICE 'Lost inventory processing complete:';
+        RAISE NOTICE '  Items marked lost: %', v_lost_count;
+        RAISE NOTICE '  Total replacement charges: $%', v_total_charges;
+    END IF;
+
+    COMMIT;
+END;
+"""
+  arguments = <
+    {
+      name = lost_threshold_days
+      type = integer
+      mode = IN
+      default = 30
+    }
+
+    {
+      name = deactivate_customer
+      type = boolean
+      mode = IN
+      default = true
+    }
+
+    {
+      name = print_debug
+      type = boolean
+      mode = IN
+      default = false
+    }
+
+  >
+  language = plpgsql
+}
+

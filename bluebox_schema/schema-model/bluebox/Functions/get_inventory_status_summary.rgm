@@ -1,0 +1,19 @@
+function "bluebox"."get_inventory_status_summary()" {
+  text = """
+
+    SELECT 
+        s.status_code,
+        s.description,
+        COUNT(i.inventory_id),
+        ROUND(100.0 * COUNT(i.inventory_id) / SUM(COUNT(i.inventory_id)) OVER (), 2)
+    FROM bluebox.inventory_status s
+    LEFT JOIN bluebox.inventory i ON s.status_id = i.status_id
+    GROUP BY s.status_id, s.status_code, s.description, s.display_order
+    ORDER BY s.display_order;
+"""
+  returnType = TABLE(status_code text, description text, inventory_count bigint, pct_of_total numeric)
+  arguments = [
+  ]
+  language = sql
+}
+

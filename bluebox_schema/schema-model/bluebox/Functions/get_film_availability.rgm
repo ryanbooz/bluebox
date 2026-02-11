@@ -1,0 +1,44 @@
+function "bluebox"."get_film_availability(integer)" {
+  text = """
+
+    WITH inventory_stats AS (
+        SELECT 
+            i.film_id,
+            count(DISTINCT i.store_id) as stores_with_film,
+            count(*) as total_copies,
+            count(*) FILTER (WHERE i.status_id = 1 
+                AND NOT EXISTS (
+                    SELECT 1 FROM bluebox.rental r 
+                    WHERE r.inventory_id = i.inventory_id 
+                    AND upper(r.rental_period) IS NULL
+                )
+            ) as copies_available
+        FROM bluebox.inventory i
+        GROUP BY i.film_id
+    )
+    SELECT 
+        f.film_id,
+        f.title,
+        f.release_date,
+        f.popularity,
+        COALESCE(inv.stores_with_film, 0),
+        COALESCE(inv.total_copies, 0),
+        COALESCE(inv.copies_available, 0)
+    FROM bluebox.film f
+    LEFT JOIN inventory_stats inv ON f.film_id = inv.film_id
+    WHERE COALESCE(inv.stores_with_film, 0) >= min_stores
+    ORDER BY f.popularity DESC;
+"""
+  returnType = TABLE(film_id bigint, title text, release_date date, popularity real, stores_with_film bigint, total_copies bigint, copies_available bigint)
+  arguments = <
+    {
+      name = min_stores
+      type = integer
+      mode = IN
+      default = 0
+    }
+
+  >
+  language = sql
+}
+

@@ -1,0 +1,129 @@
+procedure "bluebox"."rebalance_inventory(integer, boolean)" {
+  text = """
+
+DECLARE
+    v_start_time TIMESTAMPTZ;
+    v_moved INT := 0;
+BEGIN
+    v_start_time := clock_timestamp();
+    
+    IF print_debug THEN
+        RAISE NOTICE 'Starting inventory rebalance at %', v_start_time;
+    END IF;
+
+    -- Calculate store targets dynamically and rebalance
+    WITH store_metrics AS (
+        SELECT 
+            s.store_id,
+            count(DISTINCT c.customer_id) as nearby_customers
+        FROM bluebox.store s
+        LEFT JOIN bluebox.customer c ON ST_DWithin(s.geog, c.geog, 25000)
+        GROUP BY s.store_id
+    ),
+    totals AS (
+        SELECT 
+            (SELECT count(*) FROM bluebox.inventory WHERE status_id = 1) as total_inventory,
+            (SELECT count(*) FROM bluebox.store) as store_count,
+            sum(nearby_customers) as total_customers
+        FROM store_metrics
+    ),
+    dynamic_params AS (
+        SELECT 
+            -- Floor is 40% of average inventory per store
+            (total_inventory / store_count * 0.4)::int as floor_inventory,
+            -- Remainder to distribute proportionally
+            total_inventory - (total_inventory / store_count * 0.4)::int * store_count as remainder,
+            total_customers
+        FROM totals
+    ),
+    store_targets AS (
+        SELECT 
+            sm.store_id,
+            sm.nearby_customers,
+            -- Dynamic target: floor + proportional share of remainder
+            dp.floor_inventory + (sm.nearby_customers::float / dp.total_customers * dp.remainder)::int as target_inventory,
+            (SELECT count(*) FROM bluebox.inventory i WHERE i.store_id = sm.store_id AND i.status_id = 1) as current_inventory
+        FROM store_metrics sm, dynamic_params dp
+    ),
+    -- Stores that need inventory (understocked)
+    understocked AS (
+        SELECT store_id, target_inventory - current_inventory as need
+        FROM store_targets
+        WHERE current_inventory < target_inventory * 0.9  -- 10% buffer
+    ),
+    -- Stores with excess inventory (overstocked)  
+    overstocked AS (
+        SELECT store_id, current_inventory - target_inventory as excess
+        FROM store_targets
+        WHERE current_inventory > target_inventory * 1.1  -- 10% buffer
+    ),
+    -- Available inventory to move (in_circulation, not currently rented)
+    moveable_inventory AS (
+        SELECT i.inventory_id, i.store_id, i.film_id,
+            row_number() OVER (PARTITION BY i.store_id ORDER BY random()) as rn,
+            o.excess
+        FROM bluebox.inventory i
+        INNER JOIN overstocked o ON i.store_id = o.store_id
+        LEFT JOIN bluebox.rental r ON i.inventory_id = r.inventory_id 
+            AND upper(r.rental_period) IS NULL
+        WHERE i.status_id = 1
+          AND r.rental_id IS NULL  -- not currently rented
+    ),
+    -- Only take up to 'excess' items from each overstocked store
+    limited_moveable AS (
+        SELECT inventory_id, store_id, film_id, rn
+        FROM moveable_inventory
+        WHERE rn <= excess
+    ),
+    -- Assign each moveable item to an understocked store (round-robin style)
+    understocked_numbered AS (
+        SELECT store_id, need, 
+            row_number() OVER (ORDER BY need DESC) as store_rank,
+            count(*) OVER () as total_understocked
+        FROM understocked
+    ),
+    moves AS (
+        SELECT 
+            lm.inventory_id,
+            lm.store_id as from_store,
+            un.store_id as to_store
+        FROM (SELECT *, row_number() OVER (ORDER BY random()) as global_rn FROM limited_moveable) lm
+        JOIN understocked_numbered un 
+            ON ((lm.global_rn - 1) % un.total_understocked) + 1 = un.store_rank
+        LIMIT max_moves_per_run
+    )
+    UPDATE bluebox.inventory i
+    SET store_id = m.to_store, last_update = now()
+    FROM moves m
+    WHERE i.inventory_id = m.inventory_id;
+
+    GET DIAGNOSTICS v_moved = ROW_COUNT;
+
+    IF print_debug THEN
+        RAISE NOTICE 'Rebalance complete in % seconds', 
+            EXTRACT(EPOCH FROM clock_timestamp() - v_start_time)::numeric(10,2);
+        RAISE NOTICE 'Inventory items moved: %', v_moved;
+    END IF;
+
+    COMMIT;
+END;
+"""
+  arguments = <
+    {
+      name = max_moves_per_run
+      type = integer
+      mode = IN
+      default = 10000
+    }
+
+    {
+      name = print_debug
+      type = boolean
+      mode = IN
+      default = false
+    }
+
+  >
+  language = plpgsql
+}
+

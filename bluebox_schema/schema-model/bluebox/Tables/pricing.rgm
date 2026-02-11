@@ -6,7 +6,6 @@ table "bluebox"."pricing" {
     name = "pricing_pkey"
     objectType = primaryKey
   }
-  dataFilename = pricing-data.json
   columns = (
     column "pricing_key" {
       type = text

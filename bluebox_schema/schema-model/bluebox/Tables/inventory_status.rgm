@@ -6,7 +6,6 @@ table "bluebox"."inventory_status" {
     name = "inventory_status_pkey"
     objectType = primaryKey
   }
-  dataFilename = inventory_status-data.json
   columns = (
     column "status_id" {
       type = integer

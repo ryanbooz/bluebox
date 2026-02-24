@@ -1,7 +1,9 @@
-"""Load generation runner — manages the dispatch loop and lifecycle.
+"""Load generation runner — manages worker threads and lifecycle.
 
-Uses a single-threaded dispatch model since all work is I/O-bound
-database queries. The connection pool handles concurrency at the DB layer.
+Dispatches scenario execution across multiple worker threads. Each worker
+runs its own loop: pick a scenario, borrow a connection from the pool,
+execute the scenario, then sleep. The per-worker delay is scaled so the
+aggregate RPM across all workers matches the target.
 """
 
 import logging
@@ -17,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 class LoadRunner:
-    """Manages the load generation lifecycle."""
+    """Manages the load generation lifecycle with multiple worker threads."""
 
     def __init__(self, config: Config):
         self.config = config
@@ -33,7 +35,7 @@ class LoadRunner:
         self._current_delay: float = 1.0
 
     def run(self) -> None:
-        """Start the load generation loop. Blocks until stopped."""
+        """Start the load generation workers. Blocks until stopped."""
         self._install_signal_handlers()
 
         scenarios = get_all_scenarios()
@@ -45,22 +47,34 @@ class LoadRunner:
 
         self._update_rpm()
 
-        # Background threads for RPM updates and stats logging
+        num_workers = self.config.worker_threads
+        log.info(
+            "Load generation started (RPM=%.1f, workers=%d, per-worker delay=%.2fs)",
+            self._current_rpm,
+            num_workers,
+            self._worker_delay(),
+        )
+
+        # Background daemon threads for RPM updates and stats logging
         rpm_thread = threading.Thread(target=self._rpm_updater, daemon=True, name="rpm-updater")
         rpm_thread.start()
 
         stats_thread = threading.Thread(target=self._stats_logger, daemon=True, name="stats-logger")
         stats_thread.start()
 
-        log.info("Load generation started (RPM=%.1f, delay=%.2fs)", self._current_rpm, self._current_delay)
+        # Start worker threads
+        workers = []
+        for i in range(num_workers):
+            t = threading.Thread(target=self._worker_loop, daemon=True, name=f"worker-{i}")
+            t.start()
+            workers.append(t)
 
-        while not self._stop_event.is_set():
-            try:
-                self._dispatch_one()
-            except Exception:
-                log.exception("Unexpected error in dispatch loop")
+        # Block the main thread until stop is signalled
+        self._stop_event.wait()
 
-            self._stop_event.wait(timeout=self._current_delay)
+        # Wait for workers to finish their current iteration
+        for t in workers:
+            t.join(timeout=5.0)
 
         log.info("Load generation stopped")
         self._log_final_stats()
@@ -69,6 +83,25 @@ class LoadRunner:
         """Signal the runner to stop."""
         log.info("Stop requested, finishing current work...")
         self._stop_event.set()
+
+    def _worker_delay(self) -> float:
+        """Per-worker delay: spread the target RPM across all workers."""
+        return max(0.1, (60.0 / max(self._current_rpm, 1)) * self.config.worker_threads)
+
+    def _worker_loop(self) -> None:
+        """Dispatch loop for a single worker thread."""
+        name = threading.current_thread().name
+        log.debug("%s started", name)
+
+        while not self._stop_event.is_set():
+            try:
+                self._dispatch_one()
+            except Exception:
+                log.exception("Unexpected error in %s", name)
+
+            self._stop_event.wait(timeout=self._worker_delay())
+
+        log.debug("%s stopped", name)
 
     def _dispatch_one(self) -> None:
         """Pick a scenario, borrow a connection, execute it."""
@@ -98,7 +131,11 @@ class LoadRunner:
             with connection() as conn:
                 self._current_rpm = calculate_rpm(self.config, conn)
                 self._current_delay = rpm_to_delay(self._current_rpm)
-                log.debug("RPM updated: %.1f (delay=%.2fs)", self._current_rpm, self._current_delay)
+                log.debug(
+                    "RPM updated: %.1f (per-worker delay=%.2fs)",
+                    self._current_rpm,
+                    self._worker_delay(),
+                )
         except Exception:
             log.warning("Failed to update RPM, keeping current value", exc_info=True)
 
@@ -119,11 +156,12 @@ class LoadRunner:
     def _log_stats(self) -> None:
         with self._stats_lock:
             log.info(
-                "Stats: total=%d success=%d error=%d rpm=%.1f",
+                "Stats: total=%d success=%d error=%d rpm=%.1f workers=%d",
                 self._stats["total"],
                 self._stats["success"],
                 self._stats["error"],
                 self._current_rpm,
+                self.config.worker_threads,
             )
 
     def _log_final_stats(self) -> None:
@@ -134,6 +172,7 @@ class LoadRunner:
             log.info("  Total executions: %d", self._stats["total"])
             log.info("  Successes: %d", self._stats["success"])
             log.info("  Errors: %d", self._stats["error"])
+            log.info("  Workers: %d", self.config.worker_threads)
             if self._stats["by_scenario"]:
                 log.info("  %-30s %8s %8s", "Scenario", "OK", "Err")
                 log.info("  %-30s %8s %8s", "-" * 30, "-" * 8, "-" * 8)

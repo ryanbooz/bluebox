@@ -48,6 +48,7 @@ All configuration is via environment variables, loaded from a `.env` file. See `
 | `DB_PORT` | No | `5432` | Database port |
 | `POOL_MIN_SIZE` | No | `2` | Minimum connections in pool |
 | `POOL_MAX_SIZE` | No | `10` | Maximum connections in pool |
+| `WORKER_THREADS` | No | `4` | Number of concurrent dispatch threads |
 | `TIMEZONE` | No | `America/New_York` | IANA timezone for scheduling |
 | `BASE_RPM` | No | `60` | Base requests per minute |
 | `NIGHT_MULTIPLIER` | No | `0.1` | RPM multiplier for 00:00-06:00 |
@@ -68,7 +69,7 @@ When enabled, each scenario execution creates an HTTP-like server span (e.g., `G
 
 ## Scenarios
 
-The load generator includes 12 scenarios that simulate realistic web application endpoints. Each scenario has a weight that controls how frequently it is selected.
+The load generator includes 15 scenarios that simulate realistic web application endpoints. Each scenario has a weight that controls how frequently it is selected.
 
 ### Read Scenarios (~85% of traffic)
 
@@ -96,6 +97,16 @@ The load generator includes 12 scenarios that simulate realistic web application
 |----------|--------|-------------|
 | `POST /rentals` | 10 | Create a rental for a random customer at a nearby store |
 | `POST /rentals/:id/return` | 10 | Return a rental, close the period, create a payment |
+
+### IN-Clause Demo Scenarios
+
+These scenarios build variable-length IN clauses (1-200 parameters) to demonstrate pg_stat_statements behavior. On PG<=17, each distinct list length produces a separate query entry. On PG>=18, IN clauses are automatically folded into ANY, collapsing them into one entry.
+
+| Scenario | Weight | Description |
+|----------|--------|-------------|
+| `GET /films/batch` | 15 | Batch film lookup with 1-200 film IDs |
+| `GET /stores/inventory/batch` | 15 | Multi-store inventory check with 1-50 store IDs |
+| `GET /customers/rentals/batch` | 15 | Batch customer rental lookup with 1-200 customer IDs |
 
 ## Time-of-Day Scheduling
 
@@ -142,8 +153,12 @@ cli.py          Entry point, subcommands, config loading
   +-- config.py      Load .env, validate settings
   +-- db.py          psycopg3 ConnectionPool (init/close/connection)
   +-- tracing.py     Optional OTel setup + server_span() context manager
-  +-- runner.py      LoadRunner: dispatch loop, RPM pacing, signal handling
+  +-- runner.py      LoadRunner: multi-threaded dispatch, RPM pacing, signals
   |     |
-  |     +-- scenarios.py    @scenario decorator registry, 12 query definitions
-  |     +-- scheduler.py    Time-of-day RPM calculation, holiday detection
+  |     +-- scenarios/     Auto-discovered scenario files (one per scenario)
+  |     +-- scheduler.py   Time-of-day RPM calculation, holiday detection
 ```
+
+### Concurrency Model
+
+The runner spawns `WORKER_THREADS` (default 4) dispatch threads, each running its own loop. The target RPM is divided across workers so each thread sleeps for `(60 / RPM) * num_workers` seconds between executions. All workers share the psycopg3 connection pool, so `POOL_MAX_SIZE` should be >= `WORKER_THREADS`.

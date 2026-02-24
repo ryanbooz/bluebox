@@ -51,6 +51,7 @@ def cmd_check(args):
     log.info("Configuration loaded successfully")
     log.info("  Database: %s@%s:%d/%s", config.db_user, config.db_host, config.db_port, config.db_name)
     log.info("  Pool size: %d-%d", config.pool_min_size, config.pool_max_size)
+    log.info("  Workers: %d", config.worker_threads)
     log.info("  OTel: %s", "enabled" if config.otel_enabled else "disabled")
     log.info("  Timezone: %s", config.timezone)
     log.info("  Base RPM: %d", config.base_rpm)

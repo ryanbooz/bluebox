@@ -22,6 +22,9 @@ class Config:
     pool_min_size: int = 2
     pool_max_size: int = 10
 
+    # Concurrency
+    worker_threads: int = 4
+
     # OpenTelemetry (optional)
     otel_endpoint: str = ""
     otel_headers: str = ""
@@ -45,6 +48,8 @@ class Config:
             raise ValueError("POOL_MIN_SIZE must be >= 1")
         if self.pool_max_size < self.pool_min_size:
             raise ValueError("POOL_MAX_SIZE must be >= POOL_MIN_SIZE")
+        if self.worker_threads < 1:
+            raise ValueError("WORKER_THREADS must be >= 1")
         if self.base_rpm < 1:
             raise ValueError("BASE_RPM must be >= 1")
 
@@ -72,6 +77,7 @@ def load_config(env_file: str | None = None) -> Config:
         db_port=int(os.getenv("DB_PORT", "5432")),
         pool_min_size=int(os.getenv("POOL_MIN_SIZE", "2")),
         pool_max_size=int(os.getenv("POOL_MAX_SIZE", "10")),
+        worker_threads=int(os.getenv("WORKER_THREADS", "4")),
         otel_endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
         otel_headers=os.getenv("OTEL_EXPORTER_OTLP_HEADERS", ""),
         otel_service_name=os.getenv("OTEL_SERVICE_NAME", "bluebox-load"),

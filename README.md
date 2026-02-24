@@ -6,15 +6,16 @@ Although this database is far from complete, I had a few goals when modifying Pa
 
 The name **Bluebox** is a play on the US DVD vending machine company called Redbox<sup>TM</sup>, but blue for our favorite PostgreSQL elephant, Sloink.
 
-## Download
-A dump file is provided in the repo. For now, it will be "versioned" in the name, mostly for me to keep track of where I am.
+## Getting Started
 
-It is currently 77MB in size. I will continue to figure out how to make it smaller without users having to recreate all of the data through other scripts. As the data creation functions improve, I will likely provide a dump without rental data to limit the size, giving instructions on how to create as much data as you would like.
+- **[Installation](docs/install.md)** -- Set up the database using Docker or a manual restore
+- **[Data Generation](docs/data-generation.md)** -- Add new films from TMDB using the `bluebox-tmdb` CLI tool
 
 ## Requirements
+
 This database requires the PostGIS extension to be available. The easiest way to do that is to use a [Docker image from the PostGIS project](https://registry.hub.docker.com/r/postgis/postgis/), or an image that includes it.
 
-Although this database was created from PostgreSQL 16, it should be compatible with PostgreSQL 12+.
+Although this database was created from PostgreSQL 16, it should be compatible with PostgreSQL 13+.
 
 ## Project Goals
 Why create another version of Pagila or another sample PostgreSQL database at all? There are so many different datasets available across the web, right?
@@ -63,7 +64,7 @@ There is a lot to do for this database to become more feature complete. I consid
 
 - Review and create proper indexing
   - For training, it's actually helpful to have missing indexes, but any full backup I provide should have reasonable indexing for other uses.
-- recreate some of the VIEWS that existed in Pagila using the updated schema
+- ~~recreate some of the VIEWS that existed in Pagila using the updated schema~~
 - ~~move application tables into a new, non-`public` schema~~
 - remove the `staff` requirement
 - ~~possibly rename some tables~~

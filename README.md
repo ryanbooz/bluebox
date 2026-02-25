@@ -9,7 +9,7 @@ The name **Bluebox** is a play on the US DVD vending machine company called Redb
 ## Getting Started
 
 - **[Installation](docs/install.md)** -- Set up the database using Docker or a manual restore
-- **[Data Generation](docs/data-generation.md)** -- Add new films from TMDB using the `bluebox-tmdb` CLI tool
+- **[TMDB Data Import](docs/tmdb-dataload.md)** -- Add new films from TMDB using the `bluebox-tmdb` CLI tool
 - **[Load Testing](docs/load-testing.md)** -- Generate realistic query load with optional OpenTelemetry tracing
 
 ## Requirements

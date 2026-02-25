@@ -5,7 +5,7 @@ The `bluebox-load` CLI tool generates realistic database query load against the 
 ## Prerequisites
 
 - A running Bluebox PostgreSQL instance with data (see [install.md](install.md))
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) (see [Installing uv](data-generation.md#installing-uv))
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (see [Installing uv](tmdb-dataload.md#installing-uv))
 
 ## Quick Start
 

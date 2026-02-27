@@ -40,6 +40,10 @@ def init_pool(config: Config) -> ConnectionPool:
         min_size=config.pool_min_size,
         max_size=config.pool_max_size,
         open=True,
+        kwargs={
+            "autocommit": True,
+            "prepare_threshold": None,
+        },
     )
 
     return _pool

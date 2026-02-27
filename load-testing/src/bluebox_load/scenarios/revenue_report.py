@@ -1,4 +1,8 @@
-"""Monthly revenue trends with month-over-month change."""
+"""Monthly revenue trends with month-over-month change.
+
+Filtered to the last 12 months using scalar comparison against the
+BRIN index on lower(rental_period), matching the LIMIT 12 output.
+"""
 
 import psycopg
 
@@ -20,6 +24,7 @@ def revenue_report(conn: psycopg.Connection) -> None:
                        AS mom_change_pct
                FROM rental r
                LEFT JOIN payment p ON r.rental_id = p.rental_id
+               WHERE lower(r.rental_period) >= now() - interval '12 months'
                GROUP BY 1
                ORDER BY 1 DESC
                LIMIT 12"""

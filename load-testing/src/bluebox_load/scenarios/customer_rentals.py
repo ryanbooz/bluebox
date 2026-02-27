@@ -1,4 +1,11 @@
-"""Customer rental history with payment amounts."""
+"""Customer rental history with payment amounts.
+
+Queries recent rental history for a random active customer, filtered
+to a randomized lookback window (7-90 days). Uses the BRIN index on
+lower(rental_period) via scalar comparison.
+"""
+
+import random
 
 import psycopg
 
@@ -18,9 +25,11 @@ def customer_rentals(conn: psycopg.Connection) -> None:
             cur.close()
             return
         customer_id = row[0]
+        days = random.randint(7, 90)
 
         if span:
             span.set_attribute("customer.id", customer_id)
+            span.set_attribute("lookback_days", days)
 
         cur.execute(
             """SELECT r.rental_id, f.title,
@@ -32,9 +41,10 @@ def customer_rentals(conn: psycopg.Connection) -> None:
                JOIN film f ON i.film_id = f.film_id
                LEFT JOIN payment p ON r.rental_id = p.rental_id
                WHERE r.customer_id = %s
+                 AND lower(r.rental_period) >= now() - make_interval(days => %s)
                ORDER BY lower(r.rental_period) DESC
                LIMIT 20""",
-            (customer_id,),
+            (customer_id, days),
         )
         cur.fetchall()
         cur.close()

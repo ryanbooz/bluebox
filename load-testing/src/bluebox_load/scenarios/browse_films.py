@@ -62,7 +62,11 @@ def browse_films(conn: psycopg.Connection) -> None:
         else:  # search
             search_terms = [
                 "adventure", "love", "space", "war", "mystery",
-                "family", "hero", "night", "dark", "world",
+                "family", "hero", "night", "dark", "world", "marvel", 
+                "star", "life", "death", "city", "secret", "legend", 
+                "dragon", "ghost", "island", "king", "queen", "prince", 
+                "princess", "alien", "future", "past", "comedy", "horror", 
+                "thriller", "action", "romance",
             ]
             term = random.choice(search_terms)
             cur.execute(

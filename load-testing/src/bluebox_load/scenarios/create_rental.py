@@ -6,7 +6,7 @@ from ._registry import scenario
 from ..tracing import server_span
 
 
-@scenario("POST", "/rentals", weight=10, category="write")
+@scenario("POST", "/rentals", weight=15, category="write")
 def create_rental(conn: psycopg.Connection) -> None:
     with server_span("POST", "/rentals") as span:
         cur = conn.cursor()

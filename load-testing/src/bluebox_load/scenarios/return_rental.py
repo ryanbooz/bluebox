@@ -6,18 +6,18 @@ from ._registry import scenario
 from ..tracing import server_span
 
 
-@scenario("POST", "/rentals/:id/return", weight=10, category="write")
+@scenario("POST", "/rentals/:id/return", weight=12, category="write")
 def return_rental(conn: psycopg.Connection) -> None:
     with server_span("POST", "/rentals/:id/return") as span:
         cur = conn.cursor()
 
-        # Find a random open rental at least 1 hour old
+        # Find a random open rental at least 8 hours old
         cur.execute(
             """SELECT r.rental_id, r.customer_id, r.inventory_id,
                       lower(r.rental_period) AS rental_start
                FROM rental r
                WHERE upper(r.rental_period) IS NULL
-                 AND lower(r.rental_period) < now() - interval '1 hour'
+                 AND lower(r.rental_period) < now() - interval '8 hours'
                ORDER BY random()
                LIMIT 1"""
         )

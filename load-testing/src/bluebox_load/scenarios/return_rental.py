@@ -53,5 +53,23 @@ def return_rental(conn: psycopg.Connection) -> None:
             (customer_id, rental_id, rental_start, inventory_id),
         )
 
+        # Move inventory to a random nearby store (may be same store — P(same) = 1/N)
+        cur.execute(
+            """UPDATE bluebox.inventory i
+               SET store_id = return_store.store_id,
+                   last_update = now()
+               FROM (
+                   SELECT s.store_id
+                   FROM bluebox.store s
+                   JOIN bluebox.customer c ON c.customer_id = %s
+                   WHERE ST_DWithin(s.geog, c.geog, 25000)
+                   ORDER BY random()
+                   LIMIT 1
+               ) return_store
+               WHERE i.inventory_id = %s
+                 AND i.store_id != return_store.store_id""",
+            (customer_id, inventory_id),
+        )
+
         conn.commit()
         cur.close()

@@ -46,12 +46,12 @@ def load_config(env_file: str | None = None) -> Config:
 
     Args:
         env_file: Path to .env file. If None, searches for .env in the
-                  data-generation directory (the project root).
+                  tmdb-dataload directory (the project root).
     """
     if env_file:
         load_dotenv(env_file)
     else:
-        # Look for .env in the project root (data-generation/)
+        # Look for .env in the project root (tmdb-dataload/)
         project_root = Path(__file__).resolve().parent.parent.parent
         dotenv_path = project_root / ".env"
         if dotenv_path.exists():

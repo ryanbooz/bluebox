@@ -242,10 +242,10 @@ def fetch_film_details(conn, config: Config):
             if count % 50 == 0:
                 conn.commit()
                 log.info("  Fetched details for %d/%d films", count, len(films))
-
-            api.rate_limit(config.api_rate_limit)
         except Exception:
             log.warning("Could not fetch details for film %d", film_id)
+        finally:
+            api.rate_limit(config.api_rate_limit)
 
     conn.commit()
 

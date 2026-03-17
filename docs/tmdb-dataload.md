@@ -1,4 +1,4 @@
-# Data Generation (bluebox-tmdb)
+# TMDB Data Import (bluebox-tmdb)
 
 The `bluebox-tmdb` CLI tool populates the Bluebox PostgreSQL database with real movie data from [The Movie Database (TMDB)](https://www.themoviedb.org/). It discovers films, fetches cast/crew details, production company info, MPAA ratings, and distributes inventory across stores.
 
@@ -40,12 +40,12 @@ After installation, verify it works:
 uv --version
 ```
 
-That's it. When you run `uv run bluebox-tmdb ...` for the first time, uv will automatically download the correct Python version, create an isolated virtual environment in the `data-generation/` directory, and install all required packages. You don't need to run `pip install`, create a virtualenv, or activate anything.
+That's it. When you run `uv run bluebox-tmdb ...` for the first time, uv will automatically download the correct Python version, create an isolated virtual environment in the `tmdb-dataload/` directory, and install all required packages. You don't need to run `pip install`, create a virtualenv, or activate anything.
 
 ## Quick Start
 
 ```bash
-cd data-generation/
+cd tmdb-dataload/
 
 # Copy the example config and add your TMDB API key + DB connection
 cp .env.example .env

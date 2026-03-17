@@ -195,5 +195,33 @@ END;
 
   >
   language = plpgsql
+  comment = """
+Mark very old open rentals as lost and charge replacement cost.
+
+This procedure:
+1. Finds open rentals older than p_lost_after
+2. Closes the rental (sets end time to now)
+3. Marks the inventory as "lost" (status_id = 2)
+4. Charges the customer the film replacement cost
+
+Parameters:
+  p_lost_after   - How long before an open rental is considered lost (default: 30 days)
+  p_print_debug  - Print debug messages (default: false)
+
+Typical usage with pg_cron:
+  -- Run daily at 3am to process lost rentals
+  SELECT cron.schedule('process-lost-rentals', '0 3 * * *', 
+      $CALL bluebox.process_lost_rentals()$);
+
+Examples:
+  -- Default: mark rentals open > 30 days as lost
+  CALL bluebox.process_lost_rentals();
+  
+  -- More aggressive: mark rentals open > 14 days as lost
+  CALL bluebox.process_lost_rentals(
+      p_lost_after := interval '14 days',
+      p_print_debug := true
+  );
+"""
 }
 

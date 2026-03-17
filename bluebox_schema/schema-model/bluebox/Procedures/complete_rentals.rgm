@@ -180,5 +180,45 @@ END;
 
   >
   language = plpgsql
+  comment = """
+Complete (close out) open rentals, simulating customer returns.
+
+This procedure:
+1. Finds open rentals older than p_min_rental_age
+2. Skips p_skip_pct of them (these will eventually become "lost")
+3. Completes p_completion_pct of them
+4. Sets the rental end time (between p_min_duration and p_max_duration from start)
+5. Moves inventory to a random nearby store (simulating return location)
+6. Creates payment records
+
+Parameters:
+  p_min_rental_age  - Minimum time since rental start before eligible (default: 16 hours)
+  p_completion_pct  - Percentage of eligible rentals to complete (default: 15%)
+  p_skip_pct        - Percentage of eligible rentals to skip/ignore (default: 0.1%)
+                      These accumulate and are eventually marked lost by process_lost_rentals()
+  p_store_distance  - Max distance (meters) for return store (default: 25000)
+  p_min_duration    - Minimum rental duration (default: 16 hours)
+  p_max_duration    - Maximum rental duration (default: 96 hours)
+  p_print_debug     - Print debug messages (default: false)
+
+Typical usage with pg_cron:
+  -- Complete ~15% of eligible rentals every 15 minutes
+  SELECT cron.schedule('complete-rentals', '*/15 * * * *', 
+      $CALL bluebox.complete_rentals()$);
+
+Examples:
+  -- Default: complete 15% of rentals older than 16 hours, skip 0.1%
+  CALL bluebox.complete_rentals();
+  
+  -- More aggressive: complete 25% of rentals older than 12 hours
+  CALL bluebox.complete_rentals(
+      p_min_rental_age := interval '12 hours',
+      p_completion_pct := 25.0,
+      p_print_debug := true
+  );
+  
+  -- Clear backlog: complete all eligible rentals (skip none)
+  CALL bluebox.complete_rentals(p_completion_pct := 100.0, p_skip_pct := 0);
+"""
 }
 

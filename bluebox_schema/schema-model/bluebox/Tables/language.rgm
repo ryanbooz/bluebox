@@ -4,7 +4,7 @@ table "bluebox"."language" {
     column "language_id" {
       type = integer
       null = NOT NULL
-      default = nextval('bluebox.language_language_id_seq'::regclass)
+      generatedAsIdentity = BY DEFAULT
     }
     column "name" {
       type = character(20)

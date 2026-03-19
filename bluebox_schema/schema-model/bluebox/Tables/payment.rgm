@@ -12,7 +12,7 @@ table "bluebox"."payment" {
     column "payment_id" {
       type = integer
       null = NOT NULL
-      default = nextval('bluebox.payment_payment_id_seq'::regclass)
+      generatedAsIdentity = BY DEFAULT
     }
     column "customer_id" {
       type = integer

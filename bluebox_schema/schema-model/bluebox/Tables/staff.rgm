@@ -4,7 +4,7 @@ table "bluebox"."staff" {
     column "staff_id" {
       type = integer
       null = NOT NULL
-      default = nextval('bluebox.staff_staff_id_seq'::regclass)
+      generatedAsIdentity = BY DEFAULT
     }
     column "first_name" {
       type = text

@@ -17,6 +17,7 @@ from datetime import date, timedelta
 import psycopg
 
 from ._registry import scenario
+from ..pools import random_store
 from ..tracing import server_span
 
 
@@ -25,13 +26,7 @@ def recent_store_rentals(conn: psycopg.Connection) -> None:
     with server_span("GET", "/stores/:id/rentals/recent") as span:
         cur = conn.cursor()
 
-        # Pick a random store
-        cur.execute("SELECT store_id FROM store ORDER BY random() LIMIT 1")
-        row = cur.fetchone()
-        if not row:
-            cur.close()
-            return
-        store_id = row[0]
+        store_id = random_store()
 
         # Random lookback 30-180 days
         days_back = random.randint(30, 180)

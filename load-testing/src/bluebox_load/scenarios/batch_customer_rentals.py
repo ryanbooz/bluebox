@@ -14,6 +14,7 @@ import psycopg
 from psycopg import sql
 
 from ._registry import scenario
+from ..pools import random_customers
 from ..tracing import server_span
 
 
@@ -22,17 +23,8 @@ def batch_customer_rentals(conn: psycopg.Connection) -> None:
     with server_span("GET", "/customers/batch/rentals") as span:
         cur = conn.cursor()
 
-        # Pick a random number of customer IDs (1-200)
         count = random.randint(1, 200)
-        cur.execute(
-            "SELECT customer_id FROM customer WHERE activebool = TRUE ORDER BY random() LIMIT %s",
-            (count,),
-        )
-        customer_ids = [row[0] for row in cur.fetchall()]
-
-        if not customer_ids:
-            cur.close()
-            return
+        customer_ids = random_customers(count)
 
         days = random.randint(7, 90)
 

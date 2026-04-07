@@ -3,6 +3,7 @@
 import psycopg
 
 from ._registry import scenario
+from ..pools import random_zip_code
 from ..tracing import server_span
 
 
@@ -11,14 +12,7 @@ def stores_nearby(conn: psycopg.Connection) -> None:
     with server_span("GET", "/stores/nearby") as span:
         cur = conn.cursor()
 
-        cur.execute(
-            "SELECT zip_code, geog FROM zip_code_info WHERE geog IS NOT NULL ORDER BY random() LIMIT 1"
-        )
-        row = cur.fetchone()
-        if not row:
-            cur.close()
-            return
-        zip_code = row[0]
+        zip_code = random_zip_code()
 
         if span:
             span.set_attribute("search.zip_code", zip_code)

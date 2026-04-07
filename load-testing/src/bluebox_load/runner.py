@@ -17,6 +17,7 @@ import time
 
 from .config import Config
 from .db import connection
+from .pools import init_pools, start_refresh_thread
 from .scenarios import (
     get_weighted_scenarios,
     get_interval_scenarios,
@@ -62,6 +63,11 @@ class LoadRunner:
             log.info("Interval scenarios (%d): fixed cadence, independent of RPM", len(interval))
             for s in sorted(interval, key=lambda x: x.schedule_min_s):
                 log.info("  %-35s every %s", s.name, s.schedule)
+
+        # Load entity pools (store IDs, customer IDs, film titles, etc.)
+        with connection() as conn:
+            init_pools(conn)
+        start_refresh_thread(self._stop_event)
 
         self._update_rpm()
 

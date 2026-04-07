@@ -11,6 +11,7 @@ import psycopg
 from psycopg import sql
 
 from ._registry import scenario
+from ..pools import random_stores
 from ..tracing import server_span
 
 
@@ -19,14 +20,8 @@ def multi_store_inventory(conn: psycopg.Connection) -> None:
     with server_span("GET", "/stores/inventory/multi") as span:
         cur = conn.cursor()
 
-        # Pick a random number of store IDs (1-50, since ~196 stores exist)
         count = random.randint(1, 50)
-        cur.execute("SELECT store_id FROM store ORDER BY random() LIMIT %s", (count,))
-        store_ids = [row[0] for row in cur.fetchall()]
-
-        if not store_ids:
-            cur.close()
-            return
+        store_ids = random_stores(count)
 
         if span:
             span.set_attribute("batch.size", len(store_ids))

@@ -5,6 +5,7 @@ import random
 import psycopg
 
 from ._registry import scenario
+from ..pools import random_genre
 from ..tracing import server_span
 
 
@@ -15,22 +16,19 @@ def browse_films(conn: psycopg.Connection) -> None:
         cur = conn.cursor()
 
         if strategy == "genre":
-            cur.execute("SELECT genre_id FROM film_genre ORDER BY random() LIMIT 1")
-            row = cur.fetchone()
-            if row:
-                genre_id = row[0]
-                cur.execute(
-                    """SELECT film_id, title, release_date, rating, popularity, vote_average
-                       FROM film
-                       WHERE %s = ANY(genre_ids)
-                       ORDER BY popularity DESC
-                       LIMIT 20""",
-                    (genre_id,),
-                )
-                cur.fetchall()
-                if span:
-                    span.set_attribute("filter.strategy", "genre")
-                    span.set_attribute("filter.genre_id", genre_id)
+            genre_id = random_genre()
+            cur.execute(
+                """SELECT film_id, title, release_date, rating, popularity, vote_average
+                   FROM film
+                   WHERE %s = ANY(genre_ids)
+                   ORDER BY popularity DESC
+                   LIMIT 20""",
+                (genre_id,),
+            )
+            cur.fetchall()
+            if span:
+                span.set_attribute("filter.strategy", "genre")
+                span.set_attribute("filter.genre_id", genre_id)
 
         elif strategy == "rating":
             ratings = ["G", "PG", "PG-13", "R"]

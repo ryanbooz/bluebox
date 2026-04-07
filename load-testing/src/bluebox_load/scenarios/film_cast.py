@@ -3,6 +3,7 @@
 import psycopg
 
 from ._registry import scenario
+from ..pools import random_film
 from ..tracing import server_span
 
 
@@ -10,12 +11,7 @@ from ..tracing import server_span
 def film_cast(conn: psycopg.Connection) -> None:
     with server_span("GET", "/films/:id/cast") as span:
         cur = conn.cursor()
-        cur.execute("SELECT film_id FROM film ORDER BY random() LIMIT 1")
-        row = cur.fetchone()
-        if not row:
-            cur.close()
-            return
-        film_id = row[0]
+        film_id = random_film()
 
         if span:
             span.set_attribute("film.id", film_id)

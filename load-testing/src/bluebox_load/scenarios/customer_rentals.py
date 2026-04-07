@@ -10,6 +10,7 @@ import random
 import psycopg
 
 from ._registry import scenario
+from ..pools import random_customer
 from ..tracing import server_span
 
 
@@ -17,14 +18,7 @@ from ..tracing import server_span
 def customer_rentals(conn: psycopg.Connection) -> None:
     with server_span("GET", "/customers/:id/rentals") as span:
         cur = conn.cursor()
-        cur.execute(
-            "SELECT customer_id FROM customer WHERE activebool = TRUE ORDER BY random() LIMIT 1"
-        )
-        row = cur.fetchone()
-        if not row:
-            cur.close()
-            return
-        customer_id = row[0]
+        customer_id = random_customer()
         days = random.randint(7, 90)
 
         if span:

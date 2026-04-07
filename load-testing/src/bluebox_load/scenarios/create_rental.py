@@ -3,6 +3,7 @@
 import psycopg
 
 from ._registry import scenario
+from ..pools import random_customer
 from ..tracing import server_span
 
 
@@ -11,24 +12,19 @@ def create_rental(conn: psycopg.Connection) -> None:
     with server_span("POST", "/rentals") as span:
         cur = conn.cursor()
 
-        # Pick a random active customer without an open rental
+        # Pick a customer from the in-memory pool and check eligibility
+        customer_id = random_customer()
+
         cur.execute(
-            """SELECT c.customer_id
-               FROM customer c
-               WHERE c.activebool = TRUE
-                 AND NOT EXISTS (
-                     SELECT 1 FROM rental r
-                     WHERE r.customer_id = c.customer_id
-                       AND upper(r.rental_period) IS NULL
-                 )
-               ORDER BY random()
-               LIMIT 1"""
+            """SELECT 1 FROM rental r
+               WHERE r.customer_id = %s
+                 AND upper(r.rental_period) IS NULL""",
+            (customer_id,),
         )
-        row = cur.fetchone()
-        if not row:
+        if cur.fetchone():
+            # Customer already has an open rental — realistic "try again" path
             cur.close()
             return
-        customer_id = row[0]
 
         if span:
             span.set_attribute("customer.id", customer_id)

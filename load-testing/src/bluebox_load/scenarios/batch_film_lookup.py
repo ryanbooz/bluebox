@@ -1,16 +1,19 @@
-"""Batch film lookup — fetch details for a variable-length list of film IDs.
+"""Batch film lookup — search by title fragment, then fetch details for matches.
+
+Simulates a user searching for films by name, then loading full details
+for the results. The title fragment search returns a variable number of
+matches (0-200+), which naturally produces variable-length IN lists.
 
 Demonstrates PG<=17 pg_stat_statements bloat: each distinct IN-list length
 produces a separate query entry. PG>=18 automatically folds IN into ANY,
 collapsing them into a single entry.
 """
 
-import random
-
 import psycopg
 from psycopg import sql
 
 from ._registry import scenario
+from ..pools import random_title_fragment
 from ..tracing import server_span
 
 
@@ -19,12 +22,21 @@ def batch_film_lookup(conn: psycopg.Connection) -> None:
     with server_span("GET", "/films/batch") as span:
         cur = conn.cursor()
 
-        # Pick a random number of film IDs (1-200)
-        count = random.randint(1, 200)
-        cur.execute("SELECT film_id FROM film ORDER BY random() LIMIT %s", (count,))
+        # Search by a title fragment — variable result count is natural
+        fragment = random_title_fragment()
+
+        if span:
+            span.set_attribute("search.fragment", fragment)
+
+        cur.execute(
+            "SELECT film_id FROM film WHERE title ILIKE %s LIMIT 200",
+            (f"%{fragment}%",),
+        )
         film_ids = [row[0] for row in cur.fetchall()]
 
         if not film_ids:
+            if span:
+                span.set_attribute("batch.size", 0)
             cur.close()
             return
 

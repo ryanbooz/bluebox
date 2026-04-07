@@ -4,15 +4,24 @@ Dispatches scenario execution across multiple worker threads. Each worker
 runs its own loop: pick a scenario, borrow a connection from the pool,
 execute the scenario, then sleep. The per-worker delay is scaled so the
 aggregate RPM across all workers matches the target.
+
+Interval-based scenarios run on a separate dispatcher thread at a fixed
+cadence, independent of the RPM-driven worker pool.
 """
 
 import logging
+import random
 import signal
 import threading
+import time
 
 from .config import Config
 from .db import connection
-from .scenarios import pick_scenario, get_all_scenarios
+from .scenarios import (
+    get_weighted_scenarios,
+    get_interval_scenarios,
+    pick_scenario,
+)
 from .scheduler import calculate_rpm, rpm_to_delay
 
 log = logging.getLogger(__name__)
@@ -38,12 +47,21 @@ class LoadRunner:
         """Start the load generation workers. Blocks until stopped."""
         self._install_signal_handlers()
 
-        scenarios = get_all_scenarios()
-        log.info("Registered %d scenarios:", len(scenarios))
-        total_weight = sum(s.weight for s in scenarios)
-        for s in sorted(scenarios, key=lambda x: x.weight, reverse=True):
-            pct = (s.weight / total_weight) * 100
-            log.info("  %-30s weight=%d (%.1f%%)", s.name, s.weight, pct)
+        weighted = get_weighted_scenarios()
+        interval = get_interval_scenarios()
+
+        # Log weighted scenarios
+        total_weight = sum(s.weight for s in weighted)
+        log.info("Weighted scenarios (%d): selected by RPM pool", len(weighted))
+        for s in sorted(weighted, key=lambda x: x.weight, reverse=True):
+            pct = (s.weight / total_weight) * 100 if total_weight else 0
+            log.info("  %-35s weight=%d (%.1f%%)", s.name, s.weight, pct)
+
+        # Log interval scenarios
+        if interval:
+            log.info("Interval scenarios (%d): fixed cadence, independent of RPM", len(interval))
+            for s in sorted(interval, key=lambda x: x.schedule_min_s):
+                log.info("  %-35s every %s", s.name, s.schedule)
 
         self._update_rpm()
 
@@ -61,6 +79,13 @@ class LoadRunner:
 
         stats_thread = threading.Thread(target=self._stats_logger, daemon=True, name="stats-logger")
         stats_thread.start()
+
+        # Start interval dispatcher if there are interval scenarios
+        if interval:
+            interval_thread = threading.Thread(
+                target=self._interval_dispatcher, daemon=True, name="interval-dispatcher",
+            )
+            interval_thread.start()
 
         # Start worker threads
         workers = []
@@ -104,9 +129,12 @@ class LoadRunner:
         log.debug("%s stopped", name)
 
     def _dispatch_one(self) -> None:
-        """Pick a scenario, borrow a connection, execute it."""
+        """Pick a weighted scenario and execute it."""
         scenario = pick_scenario()
+        self._execute_scenario(scenario)
 
+    def _execute_scenario(self, scenario) -> None:
+        """Execute a single scenario and record stats. Thread-safe."""
         try:
             with connection() as conn:
                 scenario.func(conn)
@@ -124,6 +152,37 @@ class LoadRunner:
                 self._stats["error"] += 1
                 self._stats["by_scenario"].setdefault(scenario.name, {"success": 0, "error": 0})
                 self._stats["by_scenario"][scenario.name]["error"] += 1
+
+    def _interval_dispatcher(self) -> None:
+        """Single thread that fires interval-based scenarios at their cadence."""
+        scenarios = get_interval_scenarios()
+
+        # Stagger initial fires randomly within each scenario's interval
+        # range so they don't all fire at startup
+        next_fire: dict[str, float] = {}
+        now = time.monotonic()
+        for s in scenarios:
+            jitter = random.uniform(s.schedule_min_s, s.schedule_max_s)
+            next_fire[s.name] = now + jitter
+            log.debug("Interval scenario '%s' first fire in %.0fs", s.name, jitter)
+
+        while not self._stop_event.is_set():
+            now = time.monotonic()
+
+            for s in scenarios:
+                if now >= next_fire[s.name]:
+                    log.info("Firing interval scenario: %s", s.name)
+                    try:
+                        self._execute_scenario(s)
+                    except Exception:
+                        log.exception("Interval scenario '%s' failed", s.name)
+
+                    # Schedule next fire with randomized interval
+                    interval = random.uniform(s.schedule_min_s, s.schedule_max_s)
+                    next_fire[s.name] = now + interval
+
+            # Check for due scenarios every 10 seconds
+            self._stop_event.wait(timeout=10.0)
 
     def _update_rpm(self) -> None:
         """Recalculate RPM from scheduler."""

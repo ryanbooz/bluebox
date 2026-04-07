@@ -16,7 +16,7 @@ from ._registry import scenario
 from ..tracing import server_span
 
 
-@scenario("GET", "/reports/top-actors-naive", weight=2, category="analytics")
+@scenario("GET", "/reports/top-actors-naive", schedule="4-8h", category="analytics")
 def top_actors_naive(conn: psycopg.Connection) -> None:
     with server_span("GET", "/reports/top-actors-naive"):
         cur = conn.cursor()

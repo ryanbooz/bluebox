@@ -1,0 +1,65 @@
+view "bluebox"."v_overdue_rentals" {
+  text = """-
+SELECT r.rental_id,
+    lower(r.rental_period) AS rental_date,
+    (now() - lower(r.rental_period)) AS days_outstanding,
+    c.customer_id,
+    c.full_name,
+    c.email,
+    c.phone,
+    f.title AS film_title,
+    f.film_id,
+    i.inventory_id,
+    s.store_id,
+    s.street_name AS store_address,
+    s.zip_code AS store_zip
+   FROM ((((bluebox.rental r
+     JOIN bluebox.customer c ON ((c.customer_id = r.customer_id)))
+     JOIN bluebox.inventory i ON ((i.inventory_id = r.inventory_id)))
+     JOIN bluebox.film f ON ((f.film_id = i.film_id)))
+     JOIN bluebox.store s ON ((s.store_id = r.store_id)))
+  WHERE ((upper(r.rental_period) IS NULL) AND (lower(r.rental_period) < (now() - '5 days'::interval)));
+"""
+  columns = (
+    column "rental_id" {
+      type = bigint
+    }
+    column "rental_date" {
+      type = timestamp with time zone
+    }
+    column "days_outstanding" {
+      type = interval
+    }
+    column "customer_id" {
+      type = bigint
+    }
+    column "full_name" {
+      type = text
+    }
+    column "email" {
+      type = text
+    }
+    column "phone" {
+      type = text
+    }
+    column "film_title" {
+      type = text
+    }
+    column "film_id" {
+      type = bigint
+    }
+    column "inventory_id" {
+      type = integer
+    }
+    column "store_id" {
+      type = bigint
+    }
+    column "store_address" {
+      type = text
+    }
+    column "store_zip" {
+      type = integer
+    }
+  )
+}
+

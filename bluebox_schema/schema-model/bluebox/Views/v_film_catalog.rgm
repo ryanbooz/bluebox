@@ -1,0 +1,74 @@
+view "bluebox"."v_film_catalog" {
+  text = """-
+SELECT f.film_id,
+    f.title,
+    f.overview,
+    f.release_date,
+    f.rating,
+    f.popularity,
+    f.vote_average,
+    f.vote_count,
+    f.runtime,
+    f.budget,
+    f.revenue,
+    f.original_language,
+    string_agg(DISTINCT fg.name, ', '::text ORDER BY fg.name) AS genres,
+    ( SELECT count(*) AS count
+           FROM bluebox.film_cast fc
+          WHERE (fc.film_id = f.film_id)) AS cast_count,
+    ( SELECT count(*) AS count
+           FROM bluebox.film_crew fw
+          WHERE (fw.film_id = f.film_id)) AS crew_count
+   FROM (bluebox.film f
+     LEFT JOIN bluebox.film_genre fg ON ((fg.genre_id = ANY (f.genre_ids))))
+  GROUP BY f.film_id;
+"""
+  columns = (
+    column "film_id" {
+      type = bigint
+    }
+    column "title" {
+      type = text
+    }
+    column "overview" {
+      type = text
+    }
+    column "release_date" {
+      type = date
+    }
+    column "rating" {
+      type = public.mpaa_rating
+    }
+    column "popularity" {
+      type = real
+    }
+    column "vote_average" {
+      type = real
+    }
+    column "vote_count" {
+      type = integer
+    }
+    column "runtime" {
+      type = integer
+    }
+    column "budget" {
+      type = bigint
+    }
+    column "revenue" {
+      type = bigint
+    }
+    column "original_language" {
+      type = text
+    }
+    column "genres" {
+      type = text
+    }
+    column "cast_count" {
+      type = bigint
+    }
+    column "crew_count" {
+      type = bigint
+    }
+  )
+}
+

@@ -14,7 +14,7 @@ from ..pools import random_store, random_stores
 from ..tracing import server_span
 
 
-@scenario("GET", "/stores/:id/dashboard", weight=8, category="read")
+@scenario("GET", "/stores/:id/dashboard", schedule="4-8h", category="analytics")
 def store_dashboard(conn: psycopg.Connection) -> None:
     with server_span("GET", "/stores/:id/dashboard") as span:
         strategy = random.choice(["single", "compare", "low_stock"])

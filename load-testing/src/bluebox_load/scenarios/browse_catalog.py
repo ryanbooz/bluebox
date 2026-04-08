@@ -14,7 +14,7 @@ from ._registry import scenario
 from ..tracing import server_span
 
 
-@scenario("GET", "/catalog", weight=10, category="read")
+@scenario("GET", "/catalog", schedule="4-8h", category="analytics")
 def browse_catalog(conn: psycopg.Connection) -> None:
     with server_span("GET", "/catalog") as span:
         strategy = random.choice(["recent", "top_rated", "big_budget"])

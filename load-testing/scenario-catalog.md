@@ -10,32 +10,27 @@ Scenarios use one of two scheduling modes:
 ## Weighted Scenarios
 
 Baseline: `BASE_RPM=60`, time-of-day multipliers from `scheduler.py`, weekend 1.4x.
-Total weight = 368.
+Total weight = 332.
 
-- **Weekday total:** ~83,000 weighted requests/day
-- **Weekend total:** ~116,200 weighted requests/day
+- **Weekday total:** ~74,880 weighted requests/day
+- **Weekend total:** ~104,830 weighted requests/day
 
 ### Realistic App Traffic
 
-| Scenario | Wt | % | Weekday/day | Weekend/day | Cat | Main Tables / Views | What It Does |
+| Scenario | Wt | % | Weekday/day | Weekend/day | Cat | Main Tables | What It Does |
 |---|---|---|---|---|---|---|---|
-| `browse_films` | 50 | 13.6% | ~11,300 | ~15,800 | read | film, film_genre, zip_code_info | 4 random search strategies (genre, rating, popularity, fulltext) |
-| `film_detail` | 40 | 10.9% | ~9,000 | ~12,600 | read | film, film_cast, film_crew, person | Film detail page (3 queries) |
-| `customer_rentals` | 30 | 8.2% | ~6,800 | ~9,500 | read | rental, inventory, film, payment | Customer rental history |
-| `store_inventory` | 25 | 6.8% | ~5,600 | ~7,900 | read | inventory, film, rental | Store inventory + availability |
-| `film_availability` | 20 | 5.4% | ~4,500 | ~6,300 | read | store, inventory, film, zip_code_info | Check film availability at nearby stores (PostGIS) |
-| `film_cast` | 20 | 5.4% | ~4,500 | ~6,300 | read | film_cast, person | Cast list for a film |
-| `create_rental` | 15 | 4.1% | ~3,400 | ~4,700 | write | customer, store, inventory, rental | Create open rental |
-| `new_at_store` | 15 | 4.1% | ~3,400 | ~4,700 | read | inventory, film | New releases in stock at a store |
-| `stores_nearby` | 15 | 4.1% | ~3,400 | ~4,700 | read | store, zip_code_info | PostGIS proximity search |
-| `genre_popularity` | 15 | 4.1% | ~3,400 | ~4,700 | read | rental, inventory, film, film_genre | Genre rental counts (30-90 day window) |
-| `return_rental` | 12 | 3.3% | ~2,700 | ~3,800 | write | rental, payment, inventory, store | Close rental + payment + inventory move |
-| `browse_catalog` | 10 | 2.7% | ~2,300 | ~3,200 | read | **v_film_catalog** | Filter catalog by release date, rating, or budget |
-| `overdue_rentals` | 10 | 2.7% | ~2,300 | ~3,200 | read | rental, customer, inventory, film | Open rentals past 5-day threshold |
-| `customer_account` | 8 | 2.2% | ~1,800 | ~2,500 | read | **v_customer_rentals** | Rental history, spending summary, store-filtered history |
-| `store_dashboard` | 8 | 2.2% | ~1,800 | ~2,500 | read | **v_store_inventory_summary** | Inventory status breakdown, cross-store comparison |
-| `overdue_check` | 5 | 1.4% | ~1,100 | ~1,600 | read | **v_overdue_rentals** | Overdue rental lookup for ops (all or by store) |
-| `revenue_dashboard` | 5 | 1.4% | ~1,100 | ~1,600 | read | **v_revenue_summary** | Monthly revenue trends, store rankings |
+| `browse_films` | 50 | 15.1% | ~11,300 | ~15,800 | read | film, film_genre, zip_code_info | 4 random search strategies (genre, rating, popularity, fulltext) |
+| `film_detail` | 40 | 12.0% | ~9,000 | ~12,600 | read | film, film_cast, film_crew, person | Film detail page (3 queries) |
+| `customer_rentals` | 30 | 9.0% | ~6,700 | ~9,400 | read | rental, inventory, film, payment | Customer rental history |
+| `store_inventory` | 25 | 7.5% | ~5,600 | ~7,900 | read | inventory, film, rental | Store inventory + availability |
+| `film_availability` | 20 | 6.0% | ~4,500 | ~6,300 | read | store, inventory, film, zip_code_info | Check film availability at nearby stores (PostGIS) |
+| `film_cast` | 20 | 6.0% | ~4,500 | ~6,300 | read | film_cast, person | Cast list for a film |
+| `create_rental` | 15 | 4.5% | ~3,400 | ~4,700 | write | customer, store, inventory, rental | Create open rental |
+| `new_at_store` | 15 | 4.5% | ~3,400 | ~4,700 | read | inventory, film | New releases in stock at a store |
+| `stores_nearby` | 15 | 4.5% | ~3,400 | ~4,700 | read | store, zip_code_info | PostGIS proximity search |
+| `genre_popularity` | 15 | 4.5% | ~3,400 | ~4,700 | read | rental, inventory, film, film_genre | Genre rental counts (30-90 day window) |
+| `return_rental` | 12 | 3.6% | ~2,700 | ~3,800 | write | rental, payment, inventory, store | Close rental + payment + inventory move |
+| `overdue_rentals` | 10 | 3.0% | ~2,200 | ~3,100 | read | rental, customer, inventory, film | Open rentals past 5-day threshold |
 
 ### Anti-Pattern Demos (Weighted)
 
@@ -43,11 +38,11 @@ These run frequently as part of normal traffic to populate pg_stat_statements wi
 
 | Scenario | Wt | % | Weekday/day | Weekend/day | Cat | Anti-Pattern | Impact |
 |---|---|---|---|---|---|---|---|
-| `batch_customer_rentals` | 15 | 4.1% | ~3,400 | ~4,700 | read | Variable IN-list | queryid pollution (PG<=17) |
-| `batch_film_lookup` | 15 | 4.1% | ~3,400 | ~4,700 | read | Variable IN-list (title fragment search) | queryid pollution (PG<=17) |
-| `multi_store_inventory` | 15 | 4.1% | ~3,400 | ~4,700 | read | Variable IN-list + NOT EXISTS | queryid pollution + correlated subquery |
-| `recent_store_rentals` | 10 | 2.7% | ~2,300 | ~3,200 | read | Wrong index (ORDER BY rental_id DESC) | Backward PK scan |
-| `recent_store_activity` | 10 | 2.7% | ~2,300 | ~3,200 | read | Wrong index (ORDER BY last_update DESC) | Backward btree scan |
+| `batch_customer_rentals` | 15 | 4.5% | ~3,400 | ~4,700 | read | Variable IN-list | queryid pollution (PG<=17) |
+| `batch_film_lookup` | 15 | 4.5% | ~3,400 | ~4,700 | read | Variable IN-list (title fragment search) | queryid pollution (PG<=17) |
+| `multi_store_inventory` | 15 | 4.5% | ~3,400 | ~4,700 | read | Variable IN-list + NOT EXISTS | queryid pollution + correlated subquery |
+| `recent_store_rentals` | 10 | 3.0% | ~2,200 | ~3,100 | read | Wrong index (ORDER BY rental_id DESC) | Backward PK scan |
+| `recent_store_activity` | 10 | 3.0% | ~2,200 | ~3,100 | read | Wrong index (ORDER BY last_update DESC) | Backward btree scan |
 
 ## Interval Scenarios
 
@@ -64,6 +59,18 @@ These fire on a fixed cadence regardless of `BASE_RPM`. They do not respect time
 | `revenue_report` | 15-30m | 48-96 | analytics | rental, payment | Monthly revenue with LAG() window function |
 | `rental_trends_report` | 15-30m | 48-96 | analytics | rental | Rentals by day-of-week, GiST range overlap |
 | `stale_inventory` | 30-60m | 24-48 | analytics | inventory, film, rental | Discs not rented in 90+ days |
+
+### Tier 2: View-Based Analytics (every 4-8 hours)
+
+These query database views that exercise unindexed columns — useful for missing-index analysis.
+
+| Scenario | Schedule | ~Calls/day | Cat | Views | What It Does |
+|---|---|---|---|---|---|
+| `browse_catalog` | 4-8h | 3-6 | analytics | **v_film_catalog** | Filter catalog by release date, rating, or budget |
+| `customer_account` | 4-8h | 3-6 | analytics | **v_customer_rentals** | Rental history, spending summary, store-filtered history |
+| `store_dashboard` | 4-8h | 3-6 | analytics | **v_store_inventory_summary** | Inventory status breakdown, cross-store comparison |
+| `overdue_check` | 4-8h | 3-6 | analytics | **v_overdue_rentals** | Overdue rental lookup for ops (all or by store) |
+| `revenue_dashboard` | 4-8h | 3-6 | analytics | **v_revenue_summary** | Monthly revenue trends, store rankings |
 
 ### Tier 2/3: Maintenance & Heavy Demos (every 2-8 hours)
 
@@ -83,9 +90,9 @@ These fire on a fixed cadence regardless of `BASE_RPM`. They do not respect time
 
 - All entity selection (stores, customers, films, etc.) uses in-memory pools loaded at startup and refreshed hourly, eliminating `ORDER BY random()` table scans
 - `batch_film_lookup` now searches by title fragment via ILIKE, producing naturally variable result counts
-- The three IN-list scenarios combined are ~12.3% of weighted traffic -- significant queryid pollution, useful for PG<=17 vs PG18 comparison demos
+- The three IN-list scenarios combined are ~13.5% of weighted traffic -- significant queryid pollution, useful for PG<=17 vs PG18 comparison demos
 - Write scenarios (`create_rental`, `return_rental`) use raw SQL, not the database procedures (`generate_rentals`, `complete_rentals`)
 - `return_rental` relocates inventory to a random nearby store on return
 - `disc_recycling` is the only interval scenario that mutates data -- it gradually retires worn-out discs
-- Five view-based scenarios (`browse_catalog`, `customer_account`, `store_dashboard`, `overdue_check`, `revenue_dashboard`) query database views that exercise unindexed columns (film.release_date, film.vote_average, film.budget, inventory.status_id, payment.customer_id) — useful for missing-index analysis
+- Five view-based interval scenarios (`browse_catalog`, `customer_account`, `store_dashboard`, `overdue_check`, `revenue_dashboard`) query database views that exercise unindexed columns (film.release_date, film.vote_average, film.budget, inventory.status_id, payment.customer_id) — scheduled every 4-8h to generate missing-index signals without flooding auto_explain logs
 - No periodic batch operations are simulated yet (nightly_maintenance, rebalance_inventory, complete_rentals)

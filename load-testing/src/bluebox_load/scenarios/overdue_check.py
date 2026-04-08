@@ -14,7 +14,7 @@ from ..pools import random_store
 from ..tracing import server_span
 
 
-@scenario("GET", "/ops/overdue", weight=5, category="read")
+@scenario("GET", "/ops/overdue", schedule="4-8h", category="analytics")
 def overdue_check(conn: psycopg.Connection) -> None:
     with server_span("GET", "/ops/overdue") as span:
         strategy = random.choice(["all", "by_store"])

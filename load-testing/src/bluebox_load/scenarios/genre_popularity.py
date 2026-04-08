@@ -1,5 +1,11 @@
 """Genre popularity by rental count within a recent time window.
 
+Uses a CTE to pre-aggregate rental counts per film before joining
+to genres. This avoids the genre fan-out (each film has ~3 genres)
+multiplying hundreds of thousands of rental rows, which caused an
+external disk sort (~48 MB spill). The CTE reduces the sort input
+from ~1.3M rows to ~20k, keeping the sort entirely in memory.
+
 Uses range overlap (&&) against the GiST index on rental_period to
 find rentals active during the lookback window. The randomized window
 (30-90 days) creates plan variance depending on selectivity.
@@ -23,16 +29,22 @@ def genre_popularity(conn: psycopg.Connection) -> None:
             span.set_attribute("lookback_days", days)
 
         cur.execute(
-            """SELECT fg.name AS genre,
-                      count(r.rental_id) AS total_rentals,
-                      count(DISTINCT f.film_id) AS films_in_genre,
-                      round(count(r.rental_id)::numeric / NULLIF(count(DISTINCT f.film_id), 0), 0)
+            """WITH film_rentals AS (
+                   SELECT i.film_id,
+                          count(*) AS rental_count
+                   FROM rental r
+                   JOIN inventory i ON r.inventory_id = i.inventory_id
+                   WHERE r.rental_period && tstzrange(now() - make_interval(days => %s), now())
+                   GROUP BY i.film_id
+               )
+               SELECT fg.name AS genre,
+                      sum(fr.rental_count) AS total_rentals,
+                      count(DISTINCT fr.film_id) AS films_in_genre,
+                      round(sum(fr.rental_count)::numeric / NULLIF(count(DISTINCT fr.film_id), 0), 0)
                           AS rentals_per_film
-               FROM rental r
-               JOIN inventory i ON r.inventory_id = i.inventory_id
-               JOIN film f ON i.film_id = f.film_id
+               FROM film_rentals fr
+               JOIN film f ON f.film_id = fr.film_id
                JOIN film_genre fg ON fg.genre_id = ANY(f.genre_ids)
-               WHERE r.rental_period && tstzrange(now() - make_interval(days => %s), now())
                GROUP BY fg.name
                ORDER BY total_rentals DESC
                LIMIT 10""",

@@ -14,7 +14,7 @@ from ..pools import random_customer, random_store
 from ..tracing import server_span
 
 
-@scenario("GET", "/account/:id", weight=8, category="read")
+@scenario("GET", "/account/:id", schedule="4-8h", category="analytics")
 def customer_account(conn: psycopg.Connection) -> None:
     with server_span("GET", "/account/:id") as span:
         strategy = random.choice(["history", "spending", "store_history"])

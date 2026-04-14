@@ -1,0 +1,43 @@
+view "bluebox"."v_revenue_summary" {
+  text = """-
+SELECT s.store_id,
+    s.street_name,
+    s.zip_code,
+    date_trunc('month'::text, p.payment_date) AS revenue_month,
+    count(*) AS payment_count,
+    sum(p.amount) AS total_revenue,
+    avg(p.amount) AS avg_payment,
+    count(DISTINCT p.customer_id) AS unique_customers
+   FROM ((bluebox.payment p
+     JOIN bluebox.rental r ON ((r.rental_id = p.rental_id)))
+     JOIN bluebox.store s ON ((s.store_id = r.store_id)))
+  GROUP BY s.store_id, s.street_name, s.zip_code, (date_trunc('month'::text, p.payment_date));
+"""
+  columns = (
+    column "store_id" {
+      type = bigint
+    }
+    column "street_name" {
+      type = text
+    }
+    column "zip_code" {
+      type = integer
+    }
+    column "revenue_month" {
+      type = timestamp with time zone
+    }
+    column "payment_count" {
+      type = bigint
+    }
+    column "total_revenue" {
+      type = numeric
+    }
+    column "avg_payment" {
+      type = numeric
+    }
+    column "unique_customers" {
+      type = bigint
+    }
+  )
+}
+

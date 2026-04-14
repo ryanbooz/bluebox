@@ -4,7 +4,21 @@ All notable changes to the Bluebox project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.7.0] - 2026-04-08
+
+### Added
+- **Database views** for common app and analytics access patterns:
+  - `v_film_catalog` — film browse page with genre names, cast/crew counts
+  - `v_store_inventory_summary` — per-store inventory breakdown by status
+  - `v_customer_rentals` — customer rental history with payment and film details
+  - `v_overdue_rentals` — open rentals past 5-day threshold with customer/store context
+  - `v_revenue_summary` — monthly revenue rollup by store
+- **New load test scenarios** querying the views:
+  - `browse_catalog` (weight=10) — filter film catalog by release date, rating, budget
+  - `customer_account` (weight=8) — customer rental history and spending summaries
+  - `store_dashboard` (weight=8) — store inventory status and cross-store comparison
+  - `overdue_check` (weight=5) — overdue rental lookup for operations
+  - `revenue_dashboard` (weight=5) — monthly revenue trends and store rankings
 
 ### To Do
 - Clean regeneration of rental/payment data with the updated procedure

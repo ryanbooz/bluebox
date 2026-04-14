@@ -1,0 +1,64 @@
+view "bluebox"."v_customer_rentals" {
+  text = """-
+SELECT c.customer_id,
+    c.full_name,
+    c.email,
+    c.store_id AS home_store_id,
+    c.activebool,
+    r.rental_id,
+    lower(r.rental_period) AS rental_date,
+    upper(r.rental_period) AS return_date,
+    r.store_id AS rental_store_id,
+    f.title AS film_title,
+    f.rating,
+    p.amount,
+    p.payment_date
+   FROM ((((bluebox.customer c
+     JOIN bluebox.rental r ON ((r.customer_id = c.customer_id)))
+     JOIN bluebox.inventory i ON ((i.inventory_id = r.inventory_id)))
+     JOIN bluebox.film f ON ((f.film_id = i.film_id)))
+     LEFT JOIN bluebox.payment p ON ((p.rental_id = r.rental_id)));
+"""
+  columns = (
+    column "customer_id" {
+      type = bigint
+    }
+    column "full_name" {
+      type = text
+    }
+    column "email" {
+      type = text
+    }
+    column "home_store_id" {
+      type = integer
+    }
+    column "activebool" {
+      type = boolean
+    }
+    column "rental_id" {
+      type = bigint
+    }
+    column "rental_date" {
+      type = timestamp with time zone
+    }
+    column "return_date" {
+      type = timestamp with time zone
+    }
+    column "rental_store_id" {
+      type = integer
+    }
+    column "film_title" {
+      type = text
+    }
+    column "rating" {
+      type = public.mpaa_rating
+    }
+    column "amount" {
+      type = numeric(5,2)
+    }
+    column "payment_date" {
+      type = timestamp with time zone
+    }
+  )
+}
+

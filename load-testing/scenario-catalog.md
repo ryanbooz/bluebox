@@ -60,6 +60,18 @@ These fire on a fixed cadence regardless of `BASE_RPM`. They do not respect time
 | `rental_trends_report` | 15-30m | 48-96 | analytics | rental | Rentals by day-of-week, GiST range overlap |
 | `stale_inventory` | 30-60m | 24-48 | analytics | inventory, film, rental | Discs not rented in 90+ days |
 
+### Tier 2: View-Based Analytics (every 4-8 hours)
+
+These query database views that exercise unindexed columns — useful for missing-index analysis.
+
+| Scenario | Schedule | ~Calls/day | Cat | Views | What It Does |
+|---|---|---|---|---|---|
+| `browse_catalog` | 4-8h | 3-6 | analytics | **v_film_catalog** | Filter catalog by release date, rating, or budget |
+| `customer_account` | 4-8h | 3-6 | analytics | **v_customer_rentals** | Rental history, spending summary, store-filtered history |
+| `store_dashboard` | 4-8h | 3-6 | analytics | **v_store_inventory_summary** | Inventory status breakdown, cross-store comparison |
+| `overdue_check` | 4-8h | 3-6 | analytics | **v_overdue_rentals** | Overdue rental lookup for ops (all or by store) |
+| `revenue_dashboard` | 4-8h | 3-6 | analytics | **v_revenue_summary** | Monthly revenue trends, store rankings |
+
 ### Tier 2/3: Maintenance & Heavy Demos (every 2-8 hours)
 
 | Scenario | Schedule | ~Calls/day | Cat | What It Does | Impact |
@@ -82,4 +94,5 @@ These fire on a fixed cadence regardless of `BASE_RPM`. They do not respect time
 - Write scenarios (`create_rental`, `return_rental`) use raw SQL, not the database procedures (`generate_rentals`, `complete_rentals`)
 - `return_rental` relocates inventory to a random nearby store on return
 - `disc_recycling` is the only interval scenario that mutates data -- it gradually retires worn-out discs
+- Five view-based interval scenarios (`browse_catalog`, `customer_account`, `store_dashboard`, `overdue_check`, `revenue_dashboard`) query database views that exercise unindexed columns (film.release_date, film.vote_average, film.budget, inventory.status_id, payment.customer_id) — scheduled every 4-8h to generate missing-index signals without flooding auto_explain logs
 - No periodic batch operations are simulated yet (nightly_maintenance, rebalance_inventory, complete_rentals)

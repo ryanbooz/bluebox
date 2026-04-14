@@ -1,0 +1,39 @@
+view "bluebox"."v_store_inventory_summary" {
+  text = """-
+SELECT s.store_id,
+    s.street_name,
+    s.zip_code,
+    ist.status_code,
+    ist.description AS status_description,
+    count(*) AS disc_count,
+    count(DISTINCT i.film_id) AS unique_films
+   FROM ((bluebox.inventory i
+     JOIN bluebox.store s ON ((s.store_id = i.store_id)))
+     JOIN bluebox.inventory_status ist ON ((ist.status_id = i.status_id)))
+  GROUP BY s.store_id, s.street_name, s.zip_code, ist.status_code, ist.description;
+"""
+  columns = (
+    column "store_id" {
+      type = bigint
+    }
+    column "street_name" {
+      type = text
+    }
+    column "zip_code" {
+      type = integer
+    }
+    column "status_code" {
+      type = text
+    }
+    column "status_description" {
+      type = text
+    }
+    column "disc_count" {
+      type = bigint
+    }
+    column "unique_films" {
+      type = bigint
+    }
+  )
+}
+

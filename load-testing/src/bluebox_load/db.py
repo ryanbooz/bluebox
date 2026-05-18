@@ -17,6 +17,10 @@ def init_pool(config: Config) -> ConnectionPool:
 
     The pool sets search_path to 'bluebox,public' so that
     unqualified table names resolve to the bluebox schema first.
+
+    DB_HOST may be a comma-separated list (e.g. "node1,node2,node3"); combined
+    with DB_TARGET_SESSION_ATTRS=read-write this lets libpq find the current
+    primary across a Patroni-style failover.
     """
     global _pool
 
@@ -26,13 +30,15 @@ def init_pool(config: Config) -> ConnectionPool:
         f"port={config.db_port} "
         f"user={config.db_user} "
         f"password={config.db_password} "
+        f"target_session_attrs={config.db_target_session_attrs} "
         f"options=-csearch_path=bluebox,public"
     )
 
     log.info(
-        "Initializing connection pool (%d-%d connections) to %s@%s:%d/%s",
+        "Initializing connection pool (%d-%d connections) to %s@%s:%d/%s (target_session_attrs=%s)",
         config.pool_min_size, config.pool_max_size,
         config.db_user, config.db_host, config.db_port, config.db_name,
+        config.db_target_session_attrs,
     )
 
     _pool = ConnectionPool(
@@ -40,6 +46,10 @@ def init_pool(config: Config) -> ConnectionPool:
         min_size=config.pool_min_size,
         max_size=config.pool_max_size,
         open=True,
+        # Validate connections on checkout so a conn that was open against the
+        # old primary at the moment of failover gets discarded and replaced
+        # rather than handed to a worker that's about to throw.
+        check=ConnectionPool.check_connection,
         kwargs={
             "autocommit": True,
             "prepare_threshold": None,

@@ -1,0 +1,51 @@
+# systemd unit for the Bluebox load generator.
+#
+# Edit the three lines marked "EDIT:" below to match your VM, then see
+# deploy/README.md in this directory for install/start/stop/logs commands.
+
+[Unit]
+Description=Bluebox load generator
+# Wait until the network is actually up — without this, the service can start
+# before DNS works and fail to resolve the DB host on the first boot.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# EDIT: the Linux user that owns the checked-out repo and has uv installed.
+User=ubuntu
+Group=ubuntu
+
+# EDIT: absolute path to the load-testing/ directory. The runner loads .env
+# from this directory via python-dotenv, so EnvironmentFile= is not needed.
+WorkingDirectory=/home/ubuntu/bluebox/load-testing
+
+# EDIT: absolute path to the uv binary. Find yours with `which uv` while
+# logged in as the User= above. Common locations:
+#   /home/<user>/.local/bin/uv     (uv installed via the official installer)
+#   /usr/local/bin/uv              (system-wide install)
+ExecStart=/home/ubuntu/.local/bin/uv run bluebox-load start
+
+# Force Python to flush stdout/stderr immediately so journald sees log
+# lines in real time instead of in 4KB chunks.
+Environment=PYTHONUNBUFFERED=1
+
+# Restart on crash, but not when stopped intentionally with `systemctl stop`.
+# The 10-second pause gives a flaky DB time to recover before the next try.
+Restart=on-failure
+RestartSec=10s
+
+# The runner installs a SIGTERM handler that drains in-flight workers, so a
+# clean `systemctl stop` results in a graceful shutdown. 30s is the worst-case
+# scenario wrap-up time.
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+
+# Low-friction hardening. Avoid more aggressive options like ProtectHome= —
+# uv typically lives under /home/<user>/.local and would be blocked.
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

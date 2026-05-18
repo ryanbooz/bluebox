@@ -17,6 +17,9 @@ class Config:
     db_user: str = "postgres"
     db_password: str = "password"
     db_port: int = 5432
+    # libpq target_session_attrs. Use "read-write" with a comma-separated
+    # DB_HOST to follow the primary across an HA failover (e.g. Patroni).
+    db_target_session_attrs: str = "any"
 
     # Connection pool
     pool_min_size: int = 2
@@ -75,6 +78,7 @@ def load_config(env_file: str | None = None) -> Config:
         db_user=os.getenv("DB_USER", "postgres"),
         db_password=os.getenv("DB_PASSWORD", "password"),
         db_port=int(os.getenv("DB_PORT", "5432")),
+        db_target_session_attrs=os.getenv("DB_TARGET_SESSION_ATTRS", "any"),
         pool_min_size=int(os.getenv("POOL_MIN_SIZE", "2")),
         pool_max_size=int(os.getenv("POOL_MAX_SIZE", "10")),
         worker_threads=int(os.getenv("WORKER_THREADS", "4")),

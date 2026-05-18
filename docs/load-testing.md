@@ -42,10 +42,11 @@ All configuration is via environment variables, loaded from a `.env` file. See `
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `DB_NAME` | No | `bluebox` | PostgreSQL database name |
-| `DB_HOST` | No | `localhost` | Database host |
+| `DB_HOST` | No | `localhost` | Database host. Comma-separated for HA (see below) |
 | `DB_USER` | No | `postgres` | Database user |
 | `DB_PASSWORD` | No | `password` | Database password |
 | `DB_PORT` | No | `5432` | Database port |
+| `DB_TARGET_SESSION_ATTRS` | No | `any` | libpq target_session_attrs. Set to `read-write` with a multi-host `DB_HOST` to follow the primary across a failover |
 | `POOL_MIN_SIZE` | No | `2` | Minimum connections in pool |
 | `POOL_MAX_SIZE` | No | `10` | Maximum connections in pool |
 | `WORKER_THREADS` | No | `4` | Number of concurrent dispatch threads |
@@ -54,6 +55,18 @@ All configuration is via environment variables, loaded from a `.env` file. See `
 | `NIGHT_MULTIPLIER` | No | `0.1` | RPM multiplier for 00:00-06:00 |
 | `EVENING_MULTIPLIER` | No | `2.5` | RPM multiplier for 17:00-21:00 |
 | `HOLIDAY_MULTIPLIER` | No | `3.0` | Additional multiplier on holidays |
+
+### HA clusters (Patroni, etc.)
+
+To run the generator against an HA cluster that can change writer/reader roles, list every cluster member in `DB_HOST` and set `DB_TARGET_SESSION_ATTRS=read-write`:
+
+```
+DB_HOST=node1,node2,node3
+DB_PORT=5432
+DB_TARGET_SESSION_ATTRS=read-write
+```
+
+libpq tries each host in turn and only accepts one where `pg_is_in_recovery()` is false — i.e. the current primary. After a failover, queries already in flight will raise (one logged error per affected scenario); the pool validates connections on checkout, discards any conn still pointed at the old primary, and the next worker iteration reconnects to the new leader. No proxy or HAProxy required for this setup. The pool already disables server-side prepared statements (`prepare_threshold=None`), which is also what you want across failover.
 
 ### OpenTelemetry (optional)
 

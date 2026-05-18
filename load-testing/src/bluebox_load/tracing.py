@@ -52,7 +52,7 @@ def init_tracing(config: Config) -> None:
 
     _tracer = trace.get_tracer("bluebox-load")
 
-    PsycopgInstrumentor().instrument()
+    PsycopgInstrumentor().instrument(enable_commenter=True, commenter_options={})
 
     log.info("OTel tracing initialized (endpoint=%s, service=%s)",
              config.otel_endpoint, config.otel_service_name)

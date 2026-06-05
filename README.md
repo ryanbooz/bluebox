@@ -12,9 +12,17 @@ The name **Bluebox** is a play on the US DVD vending machine company called Redb
 - **[TMDB Data Import](docs/tmdb-dataload.md)** -- Add new films from TMDB using the `bluebox-tmdb` CLI tool
 - **[Load Testing](docs/load-testing.md)** -- Generate realistic query load with optional OpenTelemetry tracing
 
+## Quickstart
+
+The easiest way to use Bluebox is to start with the [Bluebox Docker](https://github.com/ryanbooz/bluebox-docker) project. No, really! Give that a try first!! 
+
+### [Bluebox Docker](https://github.com/ryanbooz/bluebox-docker)
+
+Simply clone that repository, run `start.sh`, and select the version of Postgres you want to use. All extensions and necessary scripts are included and ready to go.
+
 ## Requirements
 
-This database requires the PostGIS extension to be available. The easiest way to do that is to use a [Docker image from the PostGIS project](https://registry.hub.docker.com/r/postgis/postgis/), or an image that includes it.
+If you want to deploy the database yourself, you'll need PostGIS at a minimum. The easiest way to do that is to use a [Docker image from the PostGIS project](https://registry.hub.docker.com/r/postgis/postgis/), or an image that includes it. (Bluebox Docker... wink, wink...)
 
 Although this database was created from PostgreSQL 16, it should be compatible with PostgreSQL 13+.
 

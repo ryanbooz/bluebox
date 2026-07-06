@@ -4,7 +4,7 @@ The Bluebox sample database is an updated sample database for PostgreSQL, buildi
 
 Although this database is far from complete, I had a few goals when modifying Pagila to create a more full-featured database that could be used for demonstrations and training.
 
-The name **Bluebox** is a play on the US DVD vending machine company called Redbox<sup>TM</sup>, but blue for our favorite PostgreSQL elephant, Sloink.
+The name **Bluebox** is a play on the US DVD vending machine company called Redbox<sup>TM</sup>, but blue for our favorite PostgreSQL elephant, Slonik.
 
 ## Getting Started
 

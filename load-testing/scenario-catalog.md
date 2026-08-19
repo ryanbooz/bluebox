@@ -59,6 +59,7 @@ These fire on a fixed cadence regardless of `BASE_RPM`. They do not respect time
 | `revenue_report` | 15-30m | 48-96 | analytics | rental, payment | Monthly revenue with LAG() window function |
 | `rental_trends_report` | 15-30m | 48-96 | analytics | rental | Rentals by day-of-week, GiST range overlap |
 | `stale_inventory` | 30-60m | 24-48 | analytics | inventory, film, rental | Discs not rented in 90+ days |
+| `customers_near_store` | 10-30m | 48-144 | analytics | customer, store | Customers near a store for a promo mailer — **missing GiST index** on `customer.geog` (187K-row seq scan, ~650-950ms/call) |
 
 ### Tier 2: View-Based Analytics (every 4-8 hours)
 
@@ -96,3 +97,5 @@ These query database views that exercise unindexed columns — useful for missin
 - `disc_recycling` is the only interval scenario that mutates data -- it gradually retires worn-out discs
 - Five view-based interval scenarios (`browse_catalog`, `customer_account`, `store_dashboard`, `overdue_check`, `revenue_dashboard`) query database views that exercise unindexed columns (film.release_date, film.vote_average, film.budget, inventory.status_id, payment.customer_id) — scheduled every 4-8h to generate missing-index signals without flooding auto_explain logs
 - No periodic batch operations are simulated yet (nightly_maintenance, rebalance_inventory, complete_rentals)
+- `customers_near_store` targets `bluebox.customer.geog`, the one geography column in the schema with no spatial index (`zip_code_info.geog` and `rental.rental_period` both have a GiST index already)
+- `customers_near_store` binds the store's point as a parameter instead of joining `store` inline — an inline join let the planner rescan `store` per customer row instead of scanning `customer` once

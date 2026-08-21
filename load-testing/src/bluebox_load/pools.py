@@ -23,6 +23,7 @@ _film_ids: list[int] = []
 _genre_ids: list[int] = []
 _zip_codes: list[str] = []
 _title_fragments: list[str] = []
+_bio_fragments: list[str] = []
 
 # Refresh interval (seconds)
 _REFRESH_INTERVAL = 3600  # 10 minutes
@@ -43,7 +44,7 @@ def init_pools(conn) -> None:
 
 def _refresh_pools(conn) -> None:
     """Refresh all pools from the database."""
-    global _store_ids, _customer_ids, _film_ids, _genre_ids, _zip_codes, _title_fragments
+    global _store_ids, _customer_ids, _film_ids, _genre_ids, _zip_codes, _title_fragments, _bio_fragments
 
     cur = conn.cursor()
 
@@ -77,6 +78,17 @@ def _refresh_pools(conn) -> None:
                 frag_len = min(len(word), random.randint(3, 5))
                 fragments.add(word[:frag_len].lower())
     _title_fragments[:] = list(fragments)
+
+    # Same idea, over person.biography, for full-text search scenarios.
+    cur.execute("SELECT biography FROM bluebox.person WHERE biography IS NOT NULL AND biography <> ''")
+    bios = [r[0] for r in cur.fetchall()]
+    bio_words = set()
+    for bio in bios:
+        for word in bio.split():
+            word = word.strip(".,;:!?'\"()").lower()
+            if len(word) >= 5 and word.isalpha():
+                bio_words.add(word)
+    _bio_fragments[:] = list(bio_words)
 
     cur.close()
 
@@ -155,3 +167,8 @@ def random_zip_code() -> str:
 def random_title_fragment() -> str:
     """Return a random title fragment for ILIKE searches."""
     return random.choice(_title_fragments)
+
+
+def random_bio_fragment() -> str:
+    """Return a random word pulled from a person's biography, for full-text search."""
+    return random.choice(_bio_fragments)

@@ -41,6 +41,10 @@ table "bluebox"."person" {
     column "place_of_birth" {
       type = text
     }
+    column "fulltext" {
+      type = tsvector
+      generatedAs = to_tsvector('english'::regconfig, ((COALESCE(name, ''::text) || ' '::text) || COALESCE(biography, ''::text)))
+    }
   )
 }
 

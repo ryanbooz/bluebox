@@ -10,16 +10,20 @@ Scenarios use one of two scheduling modes:
 ## Weighted Scenarios
 
 Baseline: `BASE_RPM=60`, time-of-day multipliers from `scheduler.py`, weekend 1.4x.
-Total weight = 332.
+Total weight = 333.
 
 - **Weekday total:** ~74,880 weighted requests/day
 - **Weekend total:** ~104,830 weighted requests/day
+
+These two totals are fixed by the RPM/time-of-day curve (see `runner.py` — worker delay is
+derived from `calculate_rpm()`, not from total scenario weight), so adding or reweighting a
+scenario only redistributes share among the others; it does not change the totals above.
 
 ### Realistic App Traffic
 
 | Scenario | Wt | % | Weekday/day | Weekend/day | Cat | Main Tables | What It Does |
 |---|---|---|---|---|---|---|---|
-| `browse_films` | 50 | 15.1% | ~11,300 | ~15,800 | read | film, film_genre, zip_code_info | 4 random search strategies (genre, rating, popularity, fulltext) |
+| `browse_films` | 50 | 15.0% | ~11,200 | ~15,700 | read | film, film_genre, zip_code_info | 4 random search strategies (genre, rating, popularity, fulltext) |
 | `film_detail` | 40 | 12.0% | ~9,000 | ~12,600 | read | film, film_cast, film_crew, person | Film detail page (3 queries) |
 | `customer_rentals` | 30 | 9.0% | ~6,700 | ~9,400 | read | rental, inventory, film, payment | Customer rental history |
 | `store_inventory` | 25 | 7.5% | ~5,600 | ~7,900 | read | inventory, film, rental | Store inventory + availability |
@@ -43,6 +47,7 @@ These run frequently as part of normal traffic to populate pg_stat_statements wi
 | `multi_store_inventory` | 15 | 4.5% | ~3,400 | ~4,700 | read | Variable IN-list + NOT EXISTS | queryid pollution + correlated subquery |
 | `recent_store_rentals` | 10 | 3.0% | ~2,200 | ~3,100 | read | Wrong index (ORDER BY rental_id DESC) | Backward PK scan |
 | `recent_store_activity` | 10 | 3.0% | ~2,200 | ~3,100 | read | Wrong index (ORDER BY last_update DESC) | Backward btree scan |
+| `actor_bio_search` | 1 | 0.3% | ~225 | ~315 | read | Missing GiST/GIN index on `person.fulltext` | Full sequential scan per search |
 
 ## Interval Scenarios
 
@@ -59,6 +64,7 @@ These fire on a fixed cadence regardless of `BASE_RPM`. They do not respect time
 | `revenue_report` | 15-30m | 48-96 | analytics | rental, payment | Monthly revenue with LAG() window function |
 | `rental_trends_report` | 15-30m | 48-96 | analytics | rental | Rentals by day-of-week, GiST range overlap |
 | `stale_inventory` | 30-60m | 24-48 | analytics | inventory, film, rental | Discs not rented in 90+ days |
+| `customers_near_store` | 10-30m | 48-144 | analytics | customer, store | Customers near a store for a promo mailer — **missing GiST index** on `customer.geog` (187K-row seq scan, ~650-950ms/call) |
 
 ### Tier 2: View-Based Analytics (every 4-8 hours)
 
@@ -96,3 +102,7 @@ These query database views that exercise unindexed columns — useful for missin
 - `disc_recycling` is the only interval scenario that mutates data -- it gradually retires worn-out discs
 - Five view-based interval scenarios (`browse_catalog`, `customer_account`, `store_dashboard`, `overdue_check`, `revenue_dashboard`) query database views that exercise unindexed columns (film.release_date, film.vote_average, film.budget, inventory.status_id, payment.customer_id) — scheduled every 4-8h to generate missing-index signals without flooding auto_explain logs
 - No periodic batch operations are simulated yet (nightly_maintenance, rebalance_inventory, complete_rentals)
+- `customers_near_store` targets `bluebox.customer.geog`, the one geography column in the schema with no spatial index (`zip_code_info.geog` and `rental.rental_period` both have a GiST index already)
+- `customers_near_store` binds the store's point as a parameter instead of joining `store` inline — an inline join let the planner rescan `store` per customer row instead of scanning `customer` once
+- `bluebox.person.fulltext` (added in `V013`, name + biography) has no index at all — `actor_bio_search` scans it with a bare `@@` operator, unlike `film.fulltext`, which already has a GIN index
+- `pools.py` builds `_bio_fragments` the same way it builds `_title_fragments` — real words pulled from `person.biography` at refresh time, not a static list

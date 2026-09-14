@@ -18,6 +18,8 @@ uv run bluebox-load start   # start load generation
 
 Press `Ctrl+C` to stop -- the tool shuts down gracefully and prints a summary of all executed scenarios.
 
+For long-running deployments on a VM, run the generator under systemd instead of a foreground shell — see [load-testing/deploy/README.md](../load-testing/deploy/README.md). This avoids needing `tmux`/`screen`, survives logout, streams logs via `journalctl` (works in browser-based terminals like the AWS console), and auto-restarts on crash.
+
 ## Commands
 
 | Command | Description |

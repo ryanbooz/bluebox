@@ -53,6 +53,12 @@ These run frequently as part of normal traffic to populate pg_stat_statements wi
 
 These fire on a fixed cadence regardless of `BASE_RPM`. They do not respect time-of-day multipliers.
 
+### Tier 1: High-Frequency Demo (every 5 minutes)
+
+| Scenario | Schedule | ~Calls/day | Cat | Main Tables | What It Does |
+|---|---|---|---|---|---|
+| `top_spenders_by_store` | 5m | ~288 | analytics | customer, rental, payment, inventory, film | Top-spending customers with a per-store average — nested correlated subquery re-aggregates per output row (LIMIT 200 caps it); also filters `film.overview` via ILIKE (word from a curated `_OVERVIEW_SEARCH_WORDS` list spanning low-to-high selectivity) instead of the indexed `film.genre_ids`, deliberately unfixed |
+
 ### Tier 2: Periodic Analytics & Operations (every 10-60 minutes)
 
 | Scenario | Schedule | ~Calls/day | Cat | Main Tables | What It Does |
@@ -106,3 +112,5 @@ These query database views that exercise unindexed columns — useful for missin
 - `customers_near_store` binds the store's point as a parameter instead of joining `store` inline — an inline join let the planner rescan `store` per customer row instead of scanning `customer` once
 - `bluebox.person.fulltext` (added in `V013`, name + biography) has no index at all — `actor_bio_search` scans it with a bare `@@` operator, unlike `film.fulltext`, which already has a GIN index
 - `pools.py` builds `_bio_fragments` the same way it builds `_title_fragments` — real words pulled from `person.biography` at refresh time, not a static list
+- `top_spenders_by_store` rotates its lookback window (`12/18/24 months`) via a bound `%s::interval` parameter rather than a literal, so pg_stat_statements sees one queryid across all three instead of splitting the stats — confirmed locally (3 calls, 3 different intervals, 1 queryid). It uses `%s::interval` rather than this package's usual `make_interval(days => %s)`, which is a different parse tree and would merge with nothing else anyway; don't harmonize the two styles
+- `top_spenders_by_store`'s ILIKE search word is drawn from a curated 19-word list (`_OVERVIEW_SEARCH_WORDS`), not a single fixed word or the full pool of overview vocabulary — picked to span low-to-high selectivity on purpose (`darkness` ~22 matches up to `love`/`war` ~830+, out of ~7,900 films on the dev dataset). Confirmed locally: still 1 queryid across all 19 words (literals don't affect the fingerprint), and runtime spans ~40ms to ~7.3s depending on the word — that spread is intentional, not incidental

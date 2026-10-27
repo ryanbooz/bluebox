@@ -60,10 +60,10 @@ psql -h localhost -U postgres -d bluebox -c 'ANALYZE;'
 
 The dump files don't contain sample rental data because it increases the size of the repository quickly and is easy to generate with the included stored procedures.
 
-The `bluebox.generate_rental_history()` procedure can create up to one year of rental data at a time. To generate rental data for the last twelve months:
+The `bluebox.generate_rental_history()` procedure takes `date` arguments and can create up to one year of rental data at a time. To generate rental data for the last twelve months:
 
 ```bash
-psql -h localhost -U postgres -d bluebox -c "CALL bluebox.generate_rental_history(now()-'12 months'::interval, now());"
+psql -h localhost -U postgres -d bluebox -c "CALL bluebox.generate_rental_history((now()-'12 months'::interval)::date, CURRENT_DATE - 1);"
 ```
 
 ### Step 5: Login and explore
